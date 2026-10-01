@@ -105,7 +105,7 @@
         }
         .grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
             gap: 10px;
             margin: 10px 0 16px 0;
             max-height: 380px;
@@ -114,7 +114,7 @@
         }
         .card {
             background: var(--card);
-            padding: 9px 11px;
+            padding: 9px 12px;
             border-radius: 8px;
             border: 2px solid var(--border);
             cursor: pointer;
@@ -123,17 +123,27 @@
             display: flex;
             flex-direction: column;
             justify-content: center;
-            gap: 3px;
+            gap: 4px;
         }
         .card-header {
             display: flex;
             align-items: center;
-            gap: 7px;
+            gap: 8px;
+            min-width: 0;
         }
-        .card-header strong {
+        .card-title {
             color: var(--text);
-            font-weight: 600;
             font-size: 14px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .card-title strong {
+            font-weight: 600;
+        }
+        .card-name {
+            font-weight: 500;
+            color: var(--text);
         }
         .card-subtitle {
             color: var(--text-secondary);
@@ -141,7 +151,7 @@
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            padding-left: 21px;
+            padding-left: 22px;
         }
         .card.active {
             border-color: #3b82f6;
@@ -154,6 +164,7 @@
             margin: 0;
             transform: scale(1.1);
             cursor: pointer;
+            flex-shrink: 0;
         }
 
         /* Modal styling */
@@ -289,7 +300,7 @@
                 grid-template-columns: 1fr 1fr;
             }
             .grid {
-                grid-template-columns: 1fr 1fr;
+                grid-template-columns: 1fr;
                 gap: 8px;
             }
             .db-row {

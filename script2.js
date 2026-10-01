@@ -357,18 +357,18 @@ function processInput() {
         } else {
             const tag = op.tag || op.handle || '';
             const rawName = op.name && op.name.trim();
-            let subtext = escapeHtml(tag);
-            if (rawName && rawName.toLowerCase() !== `оп ${id}`.toLowerCase() && rawName.toLowerCase() !== `оп #${id}`.toLowerCase()) {
-                subtext = `${escapeHtml(rawName)} • ${escapeHtml(tag)}`;
-            }
+            const hasRealName = rawName && 
+                rawName.toLowerCase() !== `оп ${id}`.toLowerCase() && 
+                rawName.toLowerCase() !== `оп #${id}`.toLowerCase() &&
+                rawName.toLowerCase() !== `#${id}`.toLowerCase();
 
             div.className = 'card active';
             div.innerHTML = `
                 <div class="card-header">
                     <input type="checkbox" checked onchange="this.closest('.card').classList.toggle('active'); updateTags()">
-                    <strong>Оп ${escapeHtml(id)}</strong>
+                    <span class="card-title"><strong>Оп ${escapeHtml(id)}</strong>${hasRealName ? ` <span class="card-name">— ${escapeHtml(rawName)}</span>` : ''}</span>
                 </div>
-                <div class="card-subtitle">${subtext}</div>
+                <div class="card-subtitle">${escapeHtml(tag)}</div>
             `;
             div.dataset.tag = tag;
             div.dataset.handle = tag;
