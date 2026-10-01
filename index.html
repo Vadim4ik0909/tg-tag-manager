@@ -8,28 +8,44 @@
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.mini.min.js"></script>
     <style>
         :root {
-            --bg: #17212b;
-            --card: #232e3c;
-            --card-hover: #2b394a;
-            --border: #33404d;
-            --text: #f5f5f5;
-            --text-secondary: #94a3b8;
-            --primary-btn: #2563eb;
-            --primary-btn-hover: #1d4ed8;
-            --import-btn: #10b981;
-            --import-btn-hover: #059669;
-            --secondary-btn: #475569;
-            --secondary-btn-hover: #334155;
-            --danger-btn: #ef4444;
-            --danger-btn-hover: #dc2626;
-            --warn: #ef4444;
-            --input-bg: #1d2733;
+            --tg-bg: #0f1721;               /* Глибокий фоновий відтінок чатів Telegram */
+            --tg-card: #18222d;             /* Колір блоків та підкладок */
+            --tg-card-hover: #212d3b;       /* Ховер для карток та рядків */
+            --tg-border: #242f3d;           /* Розділювачі та межі */
+            --tg-text: #f5f5f5;             /* Основний білий текст */
+            --tg-text-muted: #7e8c9a;       /* Вторинний приглушений підпис */
+            --tg-accent: #2ea6ff;           /* Фірмовий блакитний колір кнопок Telegram */
+            --tg-accent-hover: #1d94e8;     /* Акцент при наведенні */
+            --tg-accent-active: rgba(46, 166, 255, 0.14); /* Фон активної виділеної картки */
+            --tg-input-bg: #131c26;         /* Фон інпутів та текстових полів */
+            --tg-input-border: #242f3d;     /* Межа інпуту у спокої */
+            --tg-input-focus: #2ea6ff;      /* Межа інпуту у фокусі */
+            --tg-warn: #e53935;             /* Червоний колір для помилок і статусу "Звільнився" */
+            --tg-success: #00c776;          /* Зелений колір успіху / "Активний" */
+
+            /* Системні аліаси */
+            --bg: var(--tg-bg);
+            --card: var(--tg-card);
+            --card-hover: var(--tg-card-hover);
+            --border: var(--tg-border);
+            --text: var(--tg-text);
+            --text-secondary: var(--tg-text-muted);
+            --primary-btn: var(--tg-accent);
+            --primary-btn-hover: var(--tg-accent-hover);
+            --import-btn: var(--tg-success);
+            --import-btn-hover: #00b368;
+            --secondary-btn: #242f3d;
+            --secondary-btn-hover: #2f3e50;
+            --danger-btn: var(--tg-warn);
+            --danger-btn-hover: #c62828;
+            --warn: var(--tg-warn);
+            --input-bg: var(--tg-input-bg);
         }
         * { box-sizing: border-box; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background: var(--bg);
-            color: var(--text);
+            background: var(--tg-bg);
+            color: var(--tg-text);
             margin: 0;
             padding: 20px;
             display: flex;
@@ -45,21 +61,21 @@
             margin-bottom: 16px;
             font-size: 22px;
             font-weight: 600;
-            color: var(--text);
+            color: var(--tg-text);
         }
         textarea, input[type="text"], input[type="number"] {
             font-size: 16px; /* Запобігає автозуму в iOS Safari */
-            color: var(--text);
-            background: var(--card);
-            border: 1px solid var(--border);
+            color: var(--tg-text);
+            background: var(--tg-input-bg);
+            border: 1px solid var(--tg-input-border);
             border-radius: 8px;
             padding: 10px 12px;
             outline: none;
-            transition: border-color 0.2s;
+            transition: border-color 0.2s, background-color 0.2s;
             font-family: inherit;
         }
         textarea:focus, input[type="text"]:focus, input[type="number"]:focus {
-            border-color: var(--primary-btn);
+            border-color: var(--tg-input-focus);
         }
         textarea {
             width: 100%;
@@ -73,9 +89,9 @@
             margin-top: 10px;
         }
         button {
-            background: var(--primary-btn);
+            background: var(--tg-accent);
             color: #ffffff;
-            border: 1px solid var(--primary-btn);
+            border: 1px solid var(--tg-accent);
             padding: 11px 18px;
             border-radius: 8px;
             cursor: pointer;
@@ -90,8 +106,8 @@
             -webkit-tap-highlight-color: transparent;
         }
         button:hover:not(:disabled) {
-            background-color: var(--primary-btn-hover);
-            border-color: var(--primary-btn-hover);
+            background-color: var(--tg-accent-hover);
+            border-color: var(--tg-accent-hover);
         }
         button:active:not(:disabled) {
             transform: scale(0.98);
@@ -99,8 +115,8 @@
         button:disabled {
             opacity: 0.35;
             cursor: not-allowed;
-            border-color: var(--border) !important;
-            color: var(--text-secondary) !important;
+            border-color: var(--tg-border) !important;
+            color: var(--tg-text-muted) !important;
             background: transparent !important;
             transform: none !important;
             box-shadow: none !important;
@@ -108,58 +124,58 @@
 
         .btn-import {
             background: transparent;
-            color: var(--import-btn);
-            border: 1px solid var(--import-btn);
+            color: var(--tg-success);
+            border: 1px solid var(--tg-success);
         }
         .btn-import:hover:not(:disabled) {
-            background-color: var(--import-btn);
+            background-color: var(--tg-success);
             color: #ffffff;
         }
         .btn-export {
             background: transparent;
-            color: #38bdf8;
-            border: 1px solid #0284c7;
+            color: var(--tg-accent);
+            border: 1px solid var(--tg-accent);
         }
         .btn-export:hover:not(:disabled) {
-            background-color: #0284c7;
+            background-color: var(--tg-accent);
             color: #ffffff;
         }
         .btn-secondary {
             background: transparent;
-            color: var(--text-secondary);
-            border: 1px solid var(--border);
+            color: var(--tg-text-muted);
+            border: 1px solid var(--tg-border);
         }
         .btn-secondary:hover:not(:disabled) {
-            background-color: var(--secondary-btn-hover);
+            background-color: var(--tg-card-hover);
             color: #ffffff;
-            border-color: var(--secondary-btn-hover);
+            border-color: var(--tg-border);
         }
         .btn-danger {
             background: transparent;
-            color: var(--danger-btn);
-            border: 1px solid var(--danger-btn);
+            color: var(--tg-warn);
+            border: 1px solid var(--tg-warn);
         }
         .btn-danger:hover:not(:disabled) {
-            background-color: var(--danger-btn);
+            background-color: var(--tg-warn);
             color: #ffffff;
         }
 
         .btn-pulse-needed {
-            background: rgba(16, 185, 129, 0.15) !important;
-            color: #10b981 !important;
-            border: 1.5px solid #10b981 !important;
-            box-shadow: 0 0 12px rgba(16, 185, 129, 0.4);
+            background: rgba(0, 199, 118, 0.12) !important;
+            color: var(--tg-success) !important;
+            border: 1.5px solid var(--tg-success) !important;
+            box-shadow: 0 0 14px rgba(0, 199, 118, 0.35);
             animation: pulseAttention 2s infinite;
         }
         @keyframes pulseAttention {
-            0%, 100% { box-shadow: 0 0 8px rgba(16, 185, 129, 0.3); }
-            50% { box-shadow: 0 0 18px rgba(16, 185, 129, 0.6); }
+            0%, 100% { box-shadow: 0 0 8px rgba(0, 199, 118, 0.25); }
+            50% { box-shadow: 0 0 18px rgba(0, 199, 118, 0.5); }
         }
 
         #opCounter {
             margin: 12px 0 8px 0;
             font-size: 14px;
-            color: var(--text-secondary);
+            color: var(--tg-text-muted);
         }
         .grid {
             display: grid;
@@ -171,10 +187,10 @@
             padding: 2px;
         }
         .card {
-            background: var(--card);
+            background: var(--tg-card);
             padding: 9px 12px;
             border-radius: 8px;
-            border: 2px solid var(--border);
+            border: 1.5px solid var(--tg-border);
             cursor: pointer;
             transition: border-color 0.2s, background-color 0.2s;
             font-size: 14px;
@@ -183,6 +199,9 @@
             justify-content: center;
             gap: 4px;
         }
+        .card:hover {
+            background: var(--tg-card-hover);
+        }
         .card-header {
             display: flex;
             align-items: center;
@@ -190,7 +209,7 @@
             min-width: 0;
         }
         .card-title {
-            color: var(--text);
+            color: var(--tg-text);
             font-size: 14px;
             white-space: nowrap;
             overflow: hidden;
@@ -201,10 +220,10 @@
         }
         .card-name {
             font-weight: 500;
-            color: var(--text);
+            color: var(--tg-text);
         }
         .card-subtitle {
-            color: var(--text-secondary);
+            color: var(--tg-text-muted);
             font-size: 12px;
             white-space: nowrap;
             overflow: hidden;
@@ -212,17 +231,18 @@
             padding-left: 22px;
         }
         .card.active {
-            border-color: #3b82f6;
-            background: rgba(59, 130, 246, 0.12);
+            border-color: var(--tg-accent);
+            background: var(--tg-accent-active);
         }
         .card.active .card-subtitle {
-            color: #60a5fa;
+            color: var(--tg-accent);
         }
         .card input[type="checkbox"] {
             margin: 0;
             transform: scale(1.1);
             cursor: pointer;
             flex-shrink: 0;
+            accent-color: var(--tg-accent);
         }
 
         /* Modal styling */
@@ -231,28 +251,28 @@
             position: fixed;
             top: 0; left: 0;
             width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.7);
-            backdrop-filter: blur(3px);
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(4px);
             justify-content: center;
             align-items: center;
             z-index: 1000;
             padding: 16px;
         }
         .modal-content {
-            background: var(--card);
-            border: 1px solid var(--border);
+            background: var(--tg-card);
+            border: 1px solid var(--tg-border);
             border-radius: 10px;
             width: 100%;
             max-width: 680px;
             max-height: 90vh;
             display: flex;
             flex-direction: column;
-            box-shadow: 0 12px 36px rgba(0,0,0,0.6);
+            box-shadow: 0 16px 40px rgba(0,0,0,0.65);
             overflow: hidden;
         }
         .modal-header {
             padding: 16px;
-            border-bottom: 1px solid var(--border);
+            border-bottom: 1px solid var(--tg-border);
             display: flex;
             flex-direction: column;
             gap: 10px;
@@ -267,7 +287,7 @@
             margin: 0;
             font-size: 18px;
             font-weight: 600;
-            color: var(--text);
+            color: var(--tg-text);
         }
         .modal-toolbar {
             display: flex;
@@ -279,17 +299,17 @@
         .search-box {
             flex: 1;
             min-width: 180px;
-            background: var(--input-bg);
-            border: 1px solid var(--border);
+            background: var(--tg-input-bg);
+            border: 1px solid var(--tg-input-border);
             border-radius: 6px;
             padding: 8px 12px;
-            color: var(--text);
+            color: var(--tg-text);
             font-size: 14px;
         }
         .btn-filter {
-            background: var(--input-bg);
-            color: var(--text-secondary);
-            border: 1px solid var(--border);
+            background: var(--tg-input-bg);
+            color: var(--tg-text-muted);
+            border: 1px solid var(--tg-border);
             padding: 6px 12px;
             border-radius: 6px;
             font-size: 13px;
@@ -298,9 +318,9 @@
             transition: background-color 0.15s, color 0.15s;
         }
         .btn-filter.active {
-            background: var(--primary-btn);
-            color: #fff;
-            border-color: var(--primary-btn);
+            background: var(--tg-accent);
+            color: #ffffff;
+            border-color: var(--tg-accent);
         }
         .status-badge {
             display: inline-flex;
@@ -312,14 +332,14 @@
             font-weight: 600;
         }
         .status-badge.active {
-            background: rgba(16, 185, 129, 0.15);
-            color: #10b981;
-            border: 1px solid rgba(16, 185, 129, 0.3);
+            background: rgba(0, 199, 118, 0.15);
+            color: var(--tg-success);
+            border: 1px solid rgba(0, 199, 118, 0.3);
         }
         .status-badge.dismissed {
-            background: rgba(239, 68, 68, 0.15);
-            color: #ef4444;
-            border: 1px solid rgba(239, 68, 68, 0.3);
+            background: rgba(229, 57, 53, 0.15);
+            color: var(--tg-warn);
+            border: 1px solid rgba(229, 57, 53, 0.3);
         }
         .modal-body {
             padding: 12px 16px;
@@ -337,27 +357,32 @@
             grid-template-columns: 65px 1fr 1fr 95px 36px !important;
             gap: 8px;
             align-items: center;
-            background: var(--input-bg);
+            background: var(--tg-input-bg);
             padding: 8px;
             border-radius: 6px;
             border: 1px solid transparent;
+            transition: background-color 0.15s, border-color 0.15s;
         }
         .db-row:hover {
-            border-color: var(--border);
+            border-color: var(--tg-border);
+            background: var(--tg-card-hover);
         }
         .db-row input {
-            background: var(--card);
-            border: 1px solid var(--border);
+            background: var(--tg-card);
+            border: 1px solid var(--tg-border);
             border-radius: 6px;
             padding: 8px 10px;
             font-size: 14px;
-            color: var(--text);
+            color: var(--tg-text);
             width: 100%;
+        }
+        .db-row input:focus {
+            border-color: var(--tg-input-focus);
         }
         .db-row .btn-del {
             background: transparent;
-            color: var(--warn);
-            border: 1px solid rgba(239, 68, 68, 0.4);
+            color: var(--tg-warn);
+            border: 1px solid rgba(229, 57, 53, 0.4);
             padding: 0;
             height: 36px;
             width: 36px;
@@ -370,11 +395,11 @@
             min-height: unset;
         }
         .db-row .btn-del:hover {
-            background: rgba(239, 68, 68, 0.15);
+            background: rgba(229, 57, 53, 0.15);
         }
         .modal-footer {
             padding: 12px 16px;
-            border-top: 1px solid var(--border);
+            border-top: 1px solid var(--tg-border);
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -391,7 +416,7 @@
             bottom: 24px;
             left: 50%;
             transform: translate(-50%, 20px);
-            background: #10b981;
+            background: var(--tg-success);
             color: #ffffff;
             padding: 10px 20px;
             border-radius: 8px;
