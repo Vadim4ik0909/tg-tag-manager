@@ -105,7 +105,7 @@
         }
         .grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
             gap: 10px;
             margin: 10px 0 16px 0;
             max-height: 380px;
@@ -114,34 +114,46 @@
         }
         .card {
             background: var(--card);
-            padding: 10px 12px;
+            padding: 9px 11px;
             border-radius: 8px;
             border: 2px solid var(--border);
             cursor: pointer;
             transition: border-color 0.2s, background-color 0.2s;
             font-size: 14px;
-            word-break: break-word;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 3px;
         }
-        .card strong {
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+        }
+        .card-header strong {
             color: var(--text);
             font-weight: 600;
+            font-size: 14px;
         }
-        .card small {
+        .card-subtitle {
             color: var(--text-secondary);
             font-size: 12px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            padding-left: 21px;
         }
         .card.active {
             border-color: var(--accent);
             background: rgba(82, 136, 193, 0.12);
         }
-        .card.active small {
+        .card.active .card-subtitle {
             color: var(--accent);
         }
         .card input[type="checkbox"] {
-            margin-right: 6px;
+            margin: 0;
             transform: scale(1.1);
             cursor: pointer;
-            vertical-align: middle;
         }
 
         /* Modal styling */

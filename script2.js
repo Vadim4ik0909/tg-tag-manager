@@ -355,11 +355,21 @@ function processInput() {
             div.style.borderColor = 'var(--warn)';
             div.innerHTML = `⚠️ ${escapeHtml(id)}: Немає в базі`;
         } else {
-            const displayName = op.name && op.name.trim() ? op.name.trim() : `Оп ${id}`;
             const tag = op.tag || op.handle || '';
+            const rawName = op.name && op.name.trim();
+            let subtext = escapeHtml(tag);
+            if (rawName && rawName.toLowerCase() !== `оп ${id}`.toLowerCase() && rawName.toLowerCase() !== `оп #${id}`.toLowerCase()) {
+                subtext = `${escapeHtml(rawName)} • ${escapeHtml(tag)}`;
+            }
+
             div.className = 'card active';
-            div.innerHTML = `<input type="checkbox" checked onchange="this.parentElement.classList.toggle('active'); updateTags()">
-                             <strong>${escapeHtml(displayName)}</strong><br><small>${escapeHtml(tag)}</small>`;
+            div.innerHTML = `
+                <div class="card-header">
+                    <input type="checkbox" checked onchange="this.closest('.card').classList.toggle('active'); updateTags()">
+                    <strong>Оп ${escapeHtml(id)}</strong>
+                </div>
+                <div class="card-subtitle">${subtext}</div>
+            `;
             div.dataset.tag = tag;
             div.dataset.handle = tag;
         }
