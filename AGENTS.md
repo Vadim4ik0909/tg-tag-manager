@@ -15,3 +15,9 @@
 - **Rule**: `git push` is **STRICTLY FORBIDDEN** by default.
 - All testing, staging, and commits must remain strictly local.
 - `git push origin main` may ONLY be executed when the user explicitly sends the trigger: `"пуш"` or `"push"`.
+
+## 4. Versioning & Changelog Automation
+- **Automatic Patch Increment**: При кожному новому функціональному коміті агент зобов'язаний автоматично піднімати patch-версію (наприклад, 1.4.0 ➔ 1.4.1).
+- **Синхронізація документації**: Записувати зміни у `CHANGELOG.md`.
+- **Синхронізація в коді та UI**: Оновлювати бейдж версії в `index.html` (`#appVersionBadge`), футер модального вікна та додавати відповідний запис у масив `APP_CHANGELOG` у `script2.js`.
+
