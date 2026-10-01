@@ -1,5 +1,14 @@
 const DEFAULT_DB = {};
 
+function sanitizeName(name, id) {
+    if (!name || typeof name !== 'string') return '';
+    const trimmed = name.trim();
+    if (/^оп\s*#?\d+$/i.test(trimmed) || trimmed === `#${id}`) {
+        return '';
+    }
+    return trimmed;
+}
+
 function loadDB() {
     try {
         const raw = localStorage.getItem('opsDB') || localStorage.getItem('operator_db');
@@ -8,7 +17,16 @@ function loadDB() {
         if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
             return {};
         }
-        return parsed;
+
+        const sanitized = {};
+        for (const [id, op] of Object.entries(parsed)) {
+            if (op && typeof op === 'object') {
+                const tag = op.handle || op.tag || '';
+                const name = sanitizeName(op.name, id);
+                sanitized[id] = { name, tag, handle: tag };
+            }
+        }
+        return sanitized;
     } catch (error) {
         return {};
     }
@@ -41,7 +59,7 @@ function toggleModal() {
     if (shouldOpen) {
         editingDbList = Object.keys(db).map(id => ({
             id: String(id),
-            name: db[id]?.name || '',
+            name: sanitizeName(db[id]?.name, id),
             tag: db[id]?.tag || db[id]?.handle || ''
         }));
         
@@ -143,7 +161,7 @@ function saveInteractiveDB() {
         const item = editingDbList[i];
         const cleanId = String(item.id || '').trim();
         let cleanTag = String(item.tag || '').trim();
-        const cleanName = String(item.name || '').trim();
+        const cleanName = sanitizeName(item.name, cleanId);
 
         if (!cleanId && !cleanTag && !cleanName) {
             continue; // Пропускаємо порожні рядки
@@ -217,9 +235,7 @@ function handleFileImport(event) {
                             if (!tag.startsWith('@')) tag = '@' + tag;
                             const cleanId = String(id).trim();
                             if (cleanId === '41' && tag === '@maria63') tag = '@mariiia63';
-                            const name = rawName && String(rawName).trim() && !/^оп\s*#?\d+$/i.test(String(rawName).trim())
-                                ? String(rawName).trim()
-                                : '';
+                            const name = sanitizeName(rawName, cleanId);
                             importedDB[cleanId] = { name, tag, handle: tag };
                         }
                     });
@@ -232,9 +248,7 @@ function handleFileImport(event) {
                             const cleanId = String(key).trim();
                             if (cleanId === '41' && tag === '@maria63') tag = '@mariiia63';
                             const rawName = val.name || val['ім\'я'] || val['имя'] || val['піб'];
-                            const name = rawName && String(rawName).trim() && !/^оп\s*#?\d+$/i.test(String(rawName).trim())
-                                ? String(rawName).trim()
-                                : '';
+                            const name = sanitizeName(rawName, cleanId);
                             if (tag) {
                                 importedDB[cleanId] = { name, tag, handle: tag };
                             }
@@ -301,9 +315,7 @@ function handleFileImport(event) {
                         let tag = String(tagVal).trim();
                         if (!tag.startsWith('@')) tag = '@' + tag;
                         if (id === '41' && tag === '@maria63') tag = '@mariiia63';
-                        const name = nameVal && String(nameVal).trim() && !/^оп\s*#?\d+$/i.test(String(nameVal).trim())
-                            ? String(nameVal).trim()
-                            : '';
+                        const name = sanitizeName(nameVal, id);
                         if (id) {
                             importedDB[id] = { name, tag, handle: tag };
                         }
@@ -361,17 +373,14 @@ function processInput() {
             div.style.borderColor = 'var(--warn)';
             div.innerHTML = `⚠️ ${escapeHtml(id)}: Немає в базі`;
         } else {
-            const tag = op.tag || op.handle || '';
-            const rawName = (op.name || '').trim();
-            const hasRealName = rawName && 
-                !/^оп\s*#?\d+$/i.test(rawName) &&
-                rawName !== `#${id}`;
+            const tag = op.handle || op.tag || '';
+            const name = sanitizeName(op.name, id);
 
             div.className = 'card active';
             div.innerHTML = `
                 <div class="card-header">
                     <input type="checkbox" checked onchange="this.closest('.card').classList.toggle('active'); updateTags()">
-                    <span class="card-title"><strong>Оп ${escapeHtml(id)}</strong>${hasRealName ? ` <span class="card-name">— ${escapeHtml(rawName)}</span>` : ''}</span>
+                    <span class="card-title"><strong>Оп ${escapeHtml(id)}</strong>${name ? ` <span class="card-name">— ${escapeHtml(name)}</span>` : ''}</span>
                 </div>
                 <div class="card-subtitle">${escapeHtml(tag)}</div>
             `;
@@ -388,7 +397,7 @@ function processInput() {
 function updateTags() {
     const activeCards = Array.from(document.querySelectorAll('.card.active'));
     const tags = activeCards
-        .map(card => card.dataset.tag || card.dataset.handle)
+        .map(card => card.dataset.handle || card.dataset.tag)
         .filter(Boolean);
 
     const resultArea = document.getElementById('tagResult');
