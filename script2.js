@@ -177,7 +177,7 @@ function saveInteractiveDB() {
 
         seenIds.add(cleanId);
         newDb[cleanId] = {
-            name: cleanName || `Оп ${cleanId}`,
+            name: cleanName,
             tag: cleanTag,
             handle: cleanTag
         };
@@ -217,7 +217,9 @@ function handleFileImport(event) {
                             if (!tag.startsWith('@')) tag = '@' + tag;
                             const cleanId = String(id).trim();
                             if (cleanId === '41' && tag === '@maria63') tag = '@mariiia63';
-                            const name = rawName && String(rawName).trim() ? String(rawName).trim() : (db[cleanId]?.name || `Оп ${cleanId}`);
+                            const name = rawName && String(rawName).trim() && !/^оп\s*#?\d+$/i.test(String(rawName).trim())
+                                ? String(rawName).trim()
+                                : '';
                             importedDB[cleanId] = { name, tag, handle: tag };
                         }
                     });
@@ -230,7 +232,9 @@ function handleFileImport(event) {
                             const cleanId = String(key).trim();
                             if (cleanId === '41' && tag === '@maria63') tag = '@mariiia63';
                             const rawName = val.name || val['ім\'я'] || val['имя'] || val['піб'];
-                            const name = rawName && String(rawName).trim() ? String(rawName).trim() : (db[cleanId]?.name || `Оп ${key}`);
+                            const name = rawName && String(rawName).trim() && !/^оп\s*#?\d+$/i.test(String(rawName).trim())
+                                ? String(rawName).trim()
+                                : '';
                             if (tag) {
                                 importedDB[cleanId] = { name, tag, handle: tag };
                             }
@@ -287,7 +291,7 @@ function handleFileImport(event) {
                             idVal = row[key];
                         } else if (/(telegram|тег|handle|нік|tag|телеграм|юзернейм|username)/i.test(cleanKey) && tagVal === null) {
                             tagVal = row[key];
-                        } else if (/(ім'я|имя|name|піб|оператор|співробітник|працівник|прізвище)/i.test(cleanKey) && nameVal === null) {
+                        } else if (/(ім'я|имя|name|піб|оператор|співробітник|працівник|прізвище|хто)/i.test(cleanKey) && nameVal === null) {
                             nameVal = row[key];
                         }
                     }
@@ -297,7 +301,9 @@ function handleFileImport(event) {
                         let tag = String(tagVal).trim();
                         if (!tag.startsWith('@')) tag = '@' + tag;
                         if (id === '41' && tag === '@maria63') tag = '@mariiia63';
-                        const name = nameVal && String(nameVal).trim() ? String(nameVal).trim() : (db[id]?.name || `Оп ${id}`);
+                        const name = nameVal && String(nameVal).trim() && !/^оп\s*#?\d+$/i.test(String(nameVal).trim())
+                            ? String(nameVal).trim()
+                            : '';
                         if (id) {
                             importedDB[id] = { name, tag, handle: tag };
                         }
@@ -336,7 +342,7 @@ function processInput() {
     if (!grid) return;
 
     if (!db || Object.keys(db).length === 0) {
-        grid.innerHTML = '<div style="grid-column: 1 / -1; color: var(--warn); padding: 12px; background: rgba(231, 76, 60, 0.08); border-radius: 8px; border: 1px dashed var(--warn); font-size: 14px; text-align: center;">База операторів порожня. Натисніть "Import Base" та оберіть файл з тегами.</div>';
+        grid.innerHTML = '<div style="grid-column: 1 / -1; color: var(--warn); padding: 12px; background: rgba(239, 68, 68, 0.08); border-radius: 8px; border: 1px dashed var(--warn); font-size: 14px; text-align: center;">База операторів порожня. Натисніть "Import Base" та оберіть файл з тегами.</div>';
         updateTags();
         return;
     }
@@ -356,11 +362,10 @@ function processInput() {
             div.innerHTML = `⚠️ ${escapeHtml(id)}: Немає в базі`;
         } else {
             const tag = op.tag || op.handle || '';
-            const rawName = op.name && op.name.trim();
+            const rawName = (op.name || '').trim();
             const hasRealName = rawName && 
-                rawName.toLowerCase() !== `оп ${id}`.toLowerCase() && 
-                rawName.toLowerCase() !== `оп #${id}`.toLowerCase() &&
-                rawName.toLowerCase() !== `#${id}`.toLowerCase();
+                !/^оп\s*#?\d+$/i.test(rawName) &&
+                rawName !== `#${id}`;
 
             div.className = 'card active';
             div.innerHTML = `
@@ -398,7 +403,9 @@ function clearCache() {
         localStorage.removeItem('opsDB');
         localStorage.removeItem('operator_db');
         db = {};
+        editingDbList = [];
         processInput();
+        updateTags();
     }
 }
 
