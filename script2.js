@@ -36,6 +36,26 @@ let db = loadDB();
 let editingDbList = [];
 let dbStatusFilter = 'all';
 
+function updateButtonStates() {
+    const hasData = db && Object.keys(db).length > 0;
+    const btnImport = document.getElementById('btnImport');
+    const btnExport = document.getElementById('btnExport');
+    const btnEdit = document.getElementById('btnEdit');
+    const btnReset = document.getElementById('btnReset');
+
+    if (!hasData) {
+        if (btnImport) btnImport.classList.add('btn-pulse-needed');
+        if (btnExport) btnExport.disabled = true;
+        if (btnEdit) btnEdit.disabled = true;
+        if (btnReset) btnReset.disabled = true;
+    } else {
+        if (btnImport) btnImport.classList.remove('btn-pulse-needed');
+        if (btnExport) btnExport.disabled = false;
+        if (btnEdit) btnEdit.disabled = false;
+        if (btnReset) btnReset.disabled = false;
+    }
+}
+
 function isDismissed(item) {
     return String(item?.name || '').trim().toLowerCase().includes('звільн');
 }
@@ -240,6 +260,7 @@ function saveInteractiveDB() {
     db = newDb;
     localStorage.setItem('opsDB', JSON.stringify(db));
     localStorage.setItem('operator_db', JSON.stringify(db));
+    updateButtonStates();
     toggleModal();
     processInput();
     alert(`Зміни збережено! Всього операторів: ${Object.keys(db).length}`);
@@ -297,6 +318,7 @@ function handleFileImport(event) {
                 db = importedDB;
                 localStorage.setItem('opsDB', JSON.stringify(db));
                 localStorage.setItem('operator_db', JSON.stringify(db));
+                updateButtonStates();
                 processInput();
                 alert(`Успішно імпортовано: ${Object.keys(db).length} операторів`);
             } catch (err) {
@@ -363,6 +385,7 @@ function handleFileImport(event) {
                 db = importedDB;
                 localStorage.setItem('opsDB', JSON.stringify(db));
                 localStorage.setItem('operator_db', JSON.stringify(db));
+                updateButtonStates();
                 processInput();
                 alert(`Успішно імпортовано: ${Object.keys(db).length} операторів`);
             } catch (err) {
@@ -384,6 +407,7 @@ function handleFileImport(event) {
 
 // Логіка роботи
 function processInput() {
+    updateButtonStates();
     const grid = document.getElementById('operatorGrid');
     if (!grid) return;
 
@@ -493,6 +517,7 @@ function clearCache() {
         localStorage.removeItem('operator_db');
         db = {};
         editingDbList = [];
+        updateButtonStates();
         processInput();
         updateTags();
     }
@@ -545,5 +570,6 @@ window.addEventListener('DOMContentLoaded', async () => {
             // Тихо пропускаємо, якщо fetch заблоковано в деяких середовищах
         }
     }
+    updateButtonStates();
     processInput();
 });

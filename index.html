@@ -75,7 +75,7 @@
         button {
             background: var(--primary-btn);
             color: #ffffff;
-            border: none;
+            border: 1px solid var(--primary-btn);
             padding: 11px 18px;
             border-radius: 8px;
             cursor: pointer;
@@ -85,18 +85,76 @@
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            transition: background-color 0.15s, transform 0.05s;
+            transition: background-color 0.15s, color 0.15s, border-color 0.15s, transform 0.05s, box-shadow 0.2s;
             user-select: none;
             -webkit-tap-highlight-color: transparent;
         }
-        button:hover { background-color: var(--primary-btn-hover); }
-        button:active { transform: scale(0.98); }
-        .btn-import { background-color: var(--import-btn); }
-        .btn-import:hover { background-color: var(--import-btn-hover); }
-        .btn-secondary { background-color: var(--secondary-btn); }
-        .btn-secondary:hover { background-color: var(--secondary-btn-hover); }
-        .btn-danger { background-color: var(--danger-btn); }
-        .btn-danger:hover { background-color: var(--danger-btn-hover); }
+        button:hover:not(:disabled) {
+            background-color: var(--primary-btn-hover);
+            border-color: var(--primary-btn-hover);
+        }
+        button:active:not(:disabled) {
+            transform: scale(0.98);
+        }
+        button:disabled {
+            opacity: 0.35;
+            cursor: not-allowed;
+            border-color: var(--border) !important;
+            color: var(--text-secondary) !important;
+            background: transparent !important;
+            transform: none !important;
+            box-shadow: none !important;
+        }
+
+        .btn-import {
+            background: transparent;
+            color: var(--import-btn);
+            border: 1px solid var(--import-btn);
+        }
+        .btn-import:hover:not(:disabled) {
+            background-color: var(--import-btn);
+            color: #ffffff;
+        }
+        .btn-export {
+            background: transparent;
+            color: #38bdf8;
+            border: 1px solid #0284c7;
+        }
+        .btn-export:hover:not(:disabled) {
+            background-color: #0284c7;
+            color: #ffffff;
+        }
+        .btn-secondary {
+            background: transparent;
+            color: var(--text-secondary);
+            border: 1px solid var(--border);
+        }
+        .btn-secondary:hover:not(:disabled) {
+            background-color: var(--secondary-btn-hover);
+            color: #ffffff;
+            border-color: var(--secondary-btn-hover);
+        }
+        .btn-danger {
+            background: transparent;
+            color: var(--danger-btn);
+            border: 1px solid var(--danger-btn);
+        }
+        .btn-danger:hover:not(:disabled) {
+            background-color: var(--danger-btn);
+            color: #ffffff;
+        }
+
+        .btn-pulse-needed {
+            background: rgba(16, 185, 129, 0.15) !important;
+            color: #10b981 !important;
+            border: 1.5px solid #10b981 !important;
+            box-shadow: 0 0 12px rgba(16, 185, 129, 0.4);
+            animation: pulseAttention 2s infinite;
+        }
+        @keyframes pulseAttention {
+            0%, 100% { box-shadow: 0 0 8px rgba(16, 185, 129, 0.3); }
+            50% { box-shadow: 0 0 18px rgba(16, 185, 129, 0.6); }
+        }
 
         #opCounter {
             margin: 12px 0 8px 0;
@@ -385,12 +443,12 @@
     <textarea id="inputIds" placeholder="Введіть номери: 1, (31), 60"></textarea>
     
     <div class="controls-grid">
-        <button onclick="processInput()">Process IDs</button>
-        <button onclick="document.getElementById('fileImporter').click()" class="btn-import">Import Base (Excel/JSON)</button>
-        <button type="button" onclick="exportDbToExcel()" class="btn-secondary">Export Base (Excel)</button>
+        <button id="btnProcess" onclick="processInput()">Process IDs</button>
+        <button id="btnImport" onclick="document.getElementById('fileImporter').click()" class="btn-import">Import Base (Excel/JSON)</button>
+        <button id="btnExport" type="button" onclick="exportDbToExcel()" class="btn-export">Export Base (Excel)</button>
         <input type="file" id="fileImporter" accept=".xlsx, .xls, .json" style="display:none;" onchange="handleFileImport(event)">
-        <button onclick="toggleModal()" class="btn-secondary">Edit Base</button>
-        <button onclick="clearCache()" class="btn-danger">Reset All</button>
+        <button id="btnEdit" onclick="toggleModal()" class="btn-secondary">Edit Base</button>
+        <button id="btnReset" onclick="clearCache()" class="btn-danger">Reset All</button>
     </div>
 
     <div id="opCounter">Вибрано: 0</div>
