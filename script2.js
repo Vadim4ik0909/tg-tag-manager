@@ -1,15 +1,16 @@
-const DEFAULT_DB = {
-    "1": { name: "Тестовий Оператор", handle: "@test_op" }
-};
+const DEFAULT_DB = {};
 
 function loadDB() {
     try {
         const raw = localStorage.getItem('opsDB');
-        if (!raw) return { ...DEFAULT_DB };
+        if (!raw) return {};
         const parsed = JSON.parse(raw);
-        return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : { ...DEFAULT_DB };
+        if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+            return {};
+        }
+        return parsed;
     } catch (error) {
-        return { ...DEFAULT_DB };
+        return {};
     }
 }
 
@@ -53,27 +54,163 @@ function saveDB() {
     }
 }
 
+function handleFileImport(event) {
+    const file = event.target?.files?.[0];
+    if (!file) return;
+
+    const isJson = file.name.endsWith('.json') || file.type === 'application/json';
+    const isExcel = file.name.match(/\.xlsx?$/i);
+
+    if (isJson) {
+        const reader = new FileReader();
+        reader.onload = function (e) {
+            try {
+                const parsed = JSON.parse(e.target.result);
+                const importedDB = {};
+
+                if (Array.isArray(parsed)) {
+                    parsed.forEach(item => {
+                        const id = item.id || item.idVal || item['№ оп'] || item['номер'];
+                        const tag = item.handle || item.tag || item.telegram || item.тег;
+                        const name = item.name || item['ім\'я'] || item['имя'] || `Оп ${id}`;
+                        if (id && tag) {
+                            let handle = String(tag).trim();
+                            if (!handle.startsWith('@')) handle = '@' + handle;
+                            importedDB[String(id).trim()] = { name: String(name).trim(), handle };
+                        }
+                    });
+                } else if (parsed && typeof parsed === 'object') {
+                    for (const [key, val] of Object.entries(parsed)) {
+                        if (val && typeof val === 'object') {
+                            const tag = val.handle || val.tag || val.telegram || val.тег || '';
+                            let handle = String(tag).trim();
+                            if (handle && !handle.startsWith('@')) handle = '@' + handle;
+                            const name = val.name || val['ім\'я'] || `Оп ${key}`;
+                            if (handle) {
+                                importedDB[String(key).trim()] = { name: String(name).trim(), handle };
+                            }
+                        }
+                    }
+                }
+
+                if (Object.keys(importedDB).length === 0) {
+                    throw new Error('У файлі JSON не знайдено валідних записів операторів');
+                }
+
+                db = importedDB;
+                localStorage.setItem('opsDB', JSON.stringify(db));
+                ensureDbEditor();
+                processInput();
+                alert(`Успішно імпортовано: ${Object.keys(db).length} операторів`);
+            } catch (err) {
+                alert('Помилка імпорту JSON: ' + err.message);
+            } finally {
+                event.target.value = '';
+            }
+        };
+        reader.onerror = function () {
+            alert('Помилка зчитування файлу');
+            event.target.value = '';
+        };
+        reader.readAsText(file);
+    } else if (isExcel) {
+        if (typeof XLSX === 'undefined') {
+            alert('Бібліотеку SheetJS ще не завантажено. Перевірте з\'єднання з інтернетом.');
+            event.target.value = '';
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = function (e) {
+            try {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const firstSheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[firstSheetName];
+                const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+                const importedDB = {};
+
+                jsonData.forEach(row => {
+                    let idVal = null;
+                    let tagVal = null;
+                    let nameVal = null;
+
+                    for (const key of Object.keys(row)) {
+                        const cleanKey = key.trim();
+                        if (/^(№\s*оп|id|номер|оп)/i.test(cleanKey) && idVal === null) {
+                            idVal = row[key];
+                        } else if (/(telegram|тег|handle|нік|tag)/i.test(cleanKey) && tagVal === null) {
+                            tagVal = row[key];
+                        } else if (/(ім'я|имя|name|піб)/i.test(cleanKey) && nameVal === null) {
+                            nameVal = row[key];
+                        }
+                    }
+
+                    if (idVal !== null && idVal !== undefined && tagVal) {
+                        const id = String(idVal).trim();
+                        let handle = String(tagVal).trim();
+                        if (!handle.startsWith('@')) handle = '@' + handle;
+                        const name = nameVal ? String(nameVal).trim() : `Оп ${id}`;
+                        if (id) {
+                            importedDB[id] = { name, handle };
+                        }
+                    }
+                });
+
+                if (Object.keys(importedDB).length === 0) {
+                    throw new Error('Не знайдено валідних колонок (ID/Тег) або рядків у таблиці');
+                }
+
+                db = importedDB;
+                localStorage.setItem('opsDB', JSON.stringify(db));
+                ensureDbEditor();
+                processInput();
+                alert(`Успішно імпортовано: ${Object.keys(db).length} операторів`);
+            } catch (err) {
+                alert('Помилка імпорту Excel: ' + err.message);
+            } finally {
+                event.target.value = '';
+            }
+        };
+        reader.onerror = function () {
+            alert('Помилка зчитування файлу');
+            event.target.value = '';
+        };
+        reader.readAsArrayBuffer(file);
+    } else {
+        alert('Підтримуються тільки файли .xlsx, .xls або .json');
+        event.target.value = '';
+    }
+}
+
 // Логіка роботи
 function processInput() {
-    const input = document.getElementById('inputIds').value || '';
     const grid = document.getElementById('operatorGrid');
     if (!grid) return;
 
-    grid.innerHTML = '';
-    const parts = input.match(/\d+/g) || [];
+    if (Object.keys(db).length === 0) {
+        grid.innerHTML = '<div style="grid-column: 1 / -1; color: var(--warn); padding: 12px; background: rgba(231, 76, 60, 0.1); border-radius: 8px; border: 1px dashed var(--warn); font-size: 14px;">⚠️ База порожня. Натисніть &quot;Import Base&quot; та оберіть файл з тегами</div>';
+        updateTags();
+        return;
+    }
 
-    parts.forEach(id => {
+    const input = document.getElementById('inputIds')?.value || '';
+    grid.innerHTML = '';
+    const uniqueIds = [...new Set(input.match(/\d+/g) || [])];
+
+    uniqueIds.forEach(id => {
         const op = db[id];
         const div = document.createElement('div');
 
         if (!op) {
             div.className = 'card';
             div.style.borderColor = 'var(--warn)';
-            div.innerHTML = `⚠️ ${id}: Немає в базі`;
+            div.innerHTML = `⚠️ #${id}: Немає в базі`;
         } else {
             div.className = 'card active';
             div.innerHTML = `<input type="checkbox" checked onchange="this.parentElement.classList.toggle('active'); updateTags()">
-                             <strong>${op.name}</strong><br><small>${op.handle}</small>`;
+                             <strong>${op.name} (#${id})</strong><br><small>${op.handle}</small>`;
             div.dataset.handle = op.handle;
         }
 
@@ -97,10 +234,11 @@ function updateTags() {
 }
 
 function clearCache() {
-    if (confirm("Скинути базу до стандартної?")) {
+    if (confirm("Скинути базу до порожньої?")) {
         localStorage.removeItem('opsDB');
-        db = { ...DEFAULT_DB };
-        location.reload();
+        db = {};
+        ensureDbEditor();
+        processInput();
     }
 }
 
@@ -129,6 +267,3 @@ window.addEventListener('DOMContentLoaded', () => {
     ensureDbEditor();
     processInput();
 });
-
-
-
