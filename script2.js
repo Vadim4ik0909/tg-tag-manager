@@ -76,7 +76,9 @@ function handleFileImport(event) {
                         if (id && tag) {
                             let handle = String(tag).trim();
                             if (!handle.startsWith('@')) handle = '@' + handle;
-                            importedDB[String(id).trim()] = { name: String(name).trim(), handle };
+                            const cleanId = String(id).trim();
+                            if (cleanId === '41' && handle === '@maria63') handle = '@mariiia63';
+                            importedDB[cleanId] = { name: String(name).trim(), handle };
                         }
                     });
                 } else if (parsed && typeof parsed === 'object') {
@@ -85,9 +87,11 @@ function handleFileImport(event) {
                             const tag = val.handle || val.tag || val.telegram || val.тег || '';
                             let handle = String(tag).trim();
                             if (handle && !handle.startsWith('@')) handle = '@' + handle;
+                            const cleanId = String(key).trim();
+                            if (cleanId === '41' && handle === '@maria63') handle = '@mariiia63';
                             const name = val.name || val['ім\'я'] || `Оп ${key}`;
                             if (handle) {
-                                importedDB[String(key).trim()] = { name: String(name).trim(), handle };
+                                importedDB[cleanId] = { name: String(name).trim(), handle };
                             }
                         }
                     }
@@ -151,6 +155,7 @@ function handleFileImport(event) {
                         const id = String(idVal).trim();
                         let handle = String(tagVal).trim();
                         if (!handle.startsWith('@')) handle = '@' + handle;
+                        if (id === '41' && handle === '@maria63') handle = '@mariiia63';
                         const name = nameVal ? String(nameVal).trim() : `Оп ${id}`;
                         if (id) {
                             importedDB[id] = { name, handle };
