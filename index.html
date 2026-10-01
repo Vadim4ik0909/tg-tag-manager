@@ -8,17 +8,22 @@
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.mini.min.js"></script>
     <style>
         :root {
-            --bg: #0e1621;
-            --card: #17212b;
-            --card-hover: #202b36;
-            --border: #242f3d;
+            --bg: #17212b;
+            --card: #232e3c;
+            --card-hover: #2b394a;
+            --border: #33404d;
             --text: #f5f5f5;
             --text-secondary: #7f91a4;
             --accent: #5288c1;
-            --accent-hover: #4370a3;
-            --success: #27ae60;
+            --accent-hover: #4575a8;
+            --import-btn: #2d5a3f;
+            --import-btn-hover: #254d35;
+            --secondary-btn: #3c4a5c;
+            --secondary-btn-hover: #323e4d;
+            --danger-btn: #a83232;
+            --danger-btn-hover: #8f2828;
             --warn: #e74c3c;
-            --input-bg: #242f3d;
+            --input-bg: #1d2733;
         }
         * { box-sizing: border-box; }
         body {
@@ -26,25 +31,24 @@
             background: var(--bg);
             color: var(--text);
             margin: 0;
-            padding: 16px;
+            padding: 20px;
             display: flex;
             justify-content: center;
         }
         .container {
             width: 100%;
-            max-width: 860px;
+            max-width: 880px;
             margin: 0 auto;
         }
         h2 {
             margin-top: 0;
             margin-bottom: 16px;
             font-size: 22px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
+            font-weight: 600;
+            color: var(--text);
         }
         textarea, input[type="text"], input[type="number"] {
-            font-size: 16px; /* Захист від автозуму в iOS Safari */
+            font-size: 16px; /* Запобігає автозуму в iOS Safari */
             color: var(--text);
             background: var(--card);
             border: 1px solid var(--border);
@@ -59,43 +63,44 @@
         }
         textarea {
             width: 100%;
-            height: 90px;
+            height: 85px;
             resize: vertical;
         }
         .controls-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            display: flex;
+            flex-wrap: wrap;
             gap: 8px;
-            margin-top: 12px;
+            margin-top: 10px;
         }
         button {
             background: var(--accent);
-            color: white;
+            color: #ffffff;
             border: none;
-            padding: 12px 14px;
+            padding: 10px 18px;
             border-radius: 8px;
             cursor: pointer;
-            font-weight: 600;
-            font-size: 15px;
-            min-height: 44px; /* Зручний тач-таргет */
+            font-weight: 500;
+            font-size: 14px;
+            min-height: 42px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            gap: 6px;
-            transition: opacity 0.2s, transform 0.1s;
+            transition: background-color 0.15s, opacity 0.15s;
             user-select: none;
             -webkit-tap-highlight-color: transparent;
         }
         button:hover { opacity: 0.92; }
-        button:active { transform: scale(0.98); }
-        .btn-success { background: var(--success); }
-        .btn-secondary { background: #334456; }
-        .btn-danger { background: var(--warn); }
+        button:active { opacity: 0.85; }
+        .btn-import { background: var(--import-btn); }
+        .btn-import:hover { background: var(--import-btn-hover); }
+        .btn-secondary { background: var(--secondary-btn); }
+        .btn-secondary:hover { background: var(--secondary-btn-hover); }
+        .btn-danger { background: var(--danger-btn); }
+        .btn-danger:hover { background: var(--danger-btn-hover); }
 
         #opCounter {
-            margin: 14px 0 8px 0;
-            font-size: 15px;
-            font-weight: 500;
+            margin: 12px 0 8px 0;
+            font-size: 14px;
             color: var(--text-secondary);
         }
         .grid {
@@ -113,18 +118,30 @@
             border-radius: 8px;
             border: 2px solid var(--border);
             cursor: pointer;
-            transition: border-color 0.2s, background 0.2s;
+            transition: border-color 0.2s, background-color 0.2s;
             font-size: 14px;
             word-break: break-word;
+        }
+        .card strong {
+            color: var(--text);
+            font-weight: 600;
+        }
+        .card small {
+            color: var(--text-secondary);
+            font-size: 12px;
         }
         .card.active {
             border-color: var(--accent);
             background: rgba(82, 136, 193, 0.12);
         }
+        .card.active small {
+            color: var(--accent);
+        }
         .card input[type="checkbox"] {
             margin-right: 6px;
-            transform: scale(1.15);
+            transform: scale(1.1);
             cursor: pointer;
+            vertical-align: middle;
         }
 
         /* Modal styling */
@@ -133,23 +150,23 @@
             position: fixed;
             top: 0; left: 0;
             width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.75);
-            backdrop-filter: blur(4px);
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(3px);
             justify-content: center;
             align-items: center;
             z-index: 1000;
-            padding: 12px;
+            padding: 16px;
         }
         .modal-content {
             background: var(--card);
             border: 1px solid var(--border);
-            border-radius: 12px;
+            border-radius: 10px;
             width: 100%;
             max-width: 680px;
             max-height: 90vh;
             display: flex;
             flex-direction: column;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            box-shadow: 0 12px 36px rgba(0,0,0,0.6);
             overflow: hidden;
         }
         .modal-header {
@@ -169,6 +186,7 @@
             margin: 0;
             font-size: 18px;
             font-weight: 600;
+            color: var(--text);
         }
         .modal-toolbar {
             display: flex;
@@ -183,7 +201,7 @@
             border-radius: 6px;
             padding: 8px 12px;
             color: var(--text);
-            font-size: 15px;
+            font-size: 14px;
         }
         .modal-body {
             padding: 12px 16px;
@@ -198,12 +216,12 @@
         }
         .db-row {
             display: grid;
-            grid-template-columns: 80px 1fr 1fr 40px;
+            grid-template-columns: 75px 1fr 1fr 38px;
             gap: 8px;
             align-items: center;
             background: var(--input-bg);
             padding: 8px;
-            border-radius: 8px;
+            border-radius: 6px;
             border: 1px solid transparent;
         }
         .db-row:hover {
@@ -214,7 +232,7 @@
             border: 1px solid var(--border);
             border-radius: 6px;
             padding: 8px 10px;
-            font-size: 15px;
+            font-size: 14px;
             color: var(--text);
             width: 100%;
         }
@@ -223,21 +241,21 @@
             color: var(--warn);
             border: 1px solid rgba(231, 76, 60, 0.4);
             padding: 0;
-            height: 38px;
-            width: 38px;
+            height: 36px;
+            width: 36px;
             border-radius: 6px;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 16px;
+            font-size: 15px;
             min-height: unset;
         }
         .db-row .btn-del:hover {
-            background: rgba(231, 76, 60, 0.2);
+            background: rgba(231, 76, 60, 0.15);
         }
         .modal-footer {
-            padding: 14px 16px;
+            padding: 12px 16px;
             border-top: 1px solid var(--border);
             display: flex;
             justify-content: space-between;
@@ -252,9 +270,10 @@
 
         /* Mobile Responsive media query */
         @media (max-width: 640px) {
-            body { padding: 10px; }
-            h2 { font-size: 19px; }
+            body { padding: 12px; }
+            h2 { font-size: 20px; }
             .controls-grid {
+                display: grid;
                 grid-template-columns: 1fr 1fr;
             }
             .grid {
@@ -262,7 +281,7 @@
                 gap: 8px;
             }
             .db-row {
-                grid-template-columns: 75px 1fr 38px;
+                grid-template-columns: 70px 1fr 36px;
                 gap: 6px;
             }
             .db-row input.row-handle {
@@ -292,44 +311,44 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
 
 <div class="container">
-    <h2>📱 TG Tag Manager PRO</h2>
-    <textarea id="inputIds" placeholder="Введіть номери операторів: 1, (31), 60, 41..."></textarea>
+    <h2>Telegram Tag Manager</h2>
+    <textarea id="inputIds" placeholder="Введіть номери: 1, (31), 60"></textarea>
     
     <div class="controls-grid">
-        <button onclick="processInput()">⚡ Process IDs</button>
-        <button onclick="document.getElementById('fileImporter').click()" class="btn-success">📥 Import Base</button>
+        <button onclick="processInput()">Process IDs</button>
+        <button onclick="document.getElementById('fileImporter').click()" class="btn-import">Import Base</button>
         <input type="file" id="fileImporter" accept=".xlsx, .xls, .json" style="display:none;" onchange="handleFileImport(event)">
-        <button onclick="toggleModal()" class="btn-secondary">⚙️ Edit Base</button>
-        <button onclick="clearCache()" class="btn-danger">🗑️ Reset All</button>
+        <button onclick="toggleModal()" class="btn-secondary">Edit Base</button>
+        <button onclick="clearCache()" class="btn-danger">Reset All</button>
     </div>
 
     <div id="opCounter">Вибрано: 0</div>
     <div class="grid" id="operatorGrid"></div>
 
-    <textarea id="tagResult" readonly placeholder="Результат тегів з'явиться тут..." style="margin-top:10px;"></textarea>
-    <button onclick="copyTags()" style="margin-top:10px; width:100%;">📋 Copy to Clipboard</button>
+    <textarea id="tagResult" readonly placeholder="Результат тегів..." style="margin-top:10px;"></textarea>
+    <button onclick="copyTags()" style="margin-top:10px; width:100%;">Copy to Clipboard</button>
 </div>
 
 <div id="dbModal" class="modal">
     <div class="modal-content">
         <div class="modal-header">
             <div class="modal-title-row">
-                <h3 class="modal-title">👥 База операторів</h3>
-                <span id="dbTotalCounter" style="color:var(--text-secondary); font-size:13px; background:rgba(255,255,255,0.06); padding:4px 8px; border-radius:12px;">Всього: 0</span>
+                <h3 class="modal-title">Редагування бази</h3>
+                <span id="dbTotalCounter" style="color:var(--text-secondary); font-size:13px;">Всього: 0</span>
             </div>
             <div class="modal-toolbar">
-                <input type="text" id="dbSearch" class="search-box" placeholder="🔍 Пошук за ID, ім'ям чи тегом..." oninput="renderDbTableRows()">
-                <button type="button" onclick="addNewDbRow()" class="btn-success" style="min-height:38px; padding:0 12px; font-size:14px; white-space:nowrap;">+ Додати</button>
+                <input type="text" id="dbSearch" class="search-box" placeholder="Пошук за ID, ім'ям або тегом..." oninput="renderDbTableRows()">
+                <button type="button" onclick="addNewDbRow()" class="btn-import" style="min-height:36px; padding:0 12px; font-size:13px;">+ Додати</button>
             </div>
         </div>
         <div class="modal-body">
             <div id="dbTableContainer" class="db-table-container"></div>
         </div>
         <div class="modal-footer">
-            <span style="font-size:13px; color:var(--text-secondary);">Зберігається суто локально в браузері</span>
+            <span style="font-size:13px; color:var(--text-secondary);">Зберігається локально у браузері</span>
             <div class="modal-footer-btns">
-                <button onclick="saveInteractiveDB()" style="background:var(--accent);">💾 Зберегти</button>
-                <button onclick="toggleModal()" class="btn-danger">Закрити</button>
+                <button onclick="saveInteractiveDB()">Save & Reload</button>
+                <button onclick="toggleModal()" class="btn-danger">Close</button>
             </div>
         </div>
     </div>

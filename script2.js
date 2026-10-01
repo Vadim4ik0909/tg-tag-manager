@@ -42,7 +42,7 @@ function toggleModal() {
         editingDbList = Object.keys(db).map(id => ({
             id: String(id),
             name: db[id]?.name || '',
-            handle: db[id]?.handle || ''
+            tag: db[id]?.tag || db[id]?.handle || ''
         }));
         
         // Сортуємо за числовим ID
@@ -66,7 +66,7 @@ function syncEditingDbFromDom() {
 
             if (idInput) editingDbList[origIdx].id = idInput.value;
             if (nameInput) editingDbList[origIdx].name = nameInput.value;
-            if (handleInput) editingDbList[origIdx].handle = handleInput.value;
+            if (handleInput) editingDbList[origIdx].tag = handleInput.value;
         }
     });
 }
@@ -91,7 +91,7 @@ function renderDbTableRows() {
             return (
                 String(item.id).toLowerCase().includes(searchQuery) ||
                 String(item.name).toLowerCase().includes(searchQuery) ||
-                String(item.handle).toLowerCase().includes(searchQuery)
+                String(item.tag).toLowerCase().includes(searchQuery)
             );
         });
 
@@ -110,8 +110,8 @@ function renderDbTableRows() {
         row.innerHTML = `
             <input type="text" class="row-id" placeholder="ID" value="${escapeHtml(item.id)}" title="Номер ID">
             <input type="text" class="row-name" placeholder="Ім'я" value="${escapeHtml(item.name)}" title="Ім'я оператора">
-            <input type="text" class="row-handle" placeholder="@тег" value="${escapeHtml(item.handle)}" title="Telegram-тег">
-            <button type="button" class="btn-del" title="Видалити запис" onclick="deleteDbRow(${originalIndex})">🗑️</button>
+            <input type="text" class="row-handle" placeholder="@тег" value="${escapeHtml(item.tag)}" title="Telegram-тег">
+            <button type="button" class="btn-del" title="Видалити" onclick="deleteDbRow(${originalIndex})">✕</button>
         `;
         container.appendChild(row);
     });
@@ -119,7 +119,7 @@ function renderDbTableRows() {
 
 function addNewDbRow() {
     syncEditingDbFromDom();
-    editingDbList.unshift({ id: '', name: '', handle: '' });
+    editingDbList.unshift({ id: '', name: '', tag: '' });
     renderDbTableRows();
     const firstInput = document.querySelector('.db-row input.row-id');
     if (firstInput) firstInput.focus();
@@ -142,10 +142,10 @@ function saveInteractiveDB() {
     for (let i = 0; i < editingDbList.length; i++) {
         const item = editingDbList[i];
         const cleanId = String(item.id || '').trim();
-        let cleanHandle = String(item.handle || '').trim();
+        let cleanTag = String(item.tag || '').trim();
         const cleanName = String(item.name || '').trim();
 
-        if (!cleanId && !cleanHandle && !cleanName) {
+        if (!cleanId && !cleanTag && !cleanName) {
             continue; // Пропускаємо порожні рядки
         }
 
@@ -155,7 +155,7 @@ function saveInteractiveDB() {
             break;
         }
 
-        if (!cleanHandle) {
+        if (!cleanTag) {
             alert(`Рядок #${i + 1} (ID: ${cleanId}): Telegram-тег не може бути порожнім`);
             hasErrors = true;
             break;
@@ -167,18 +167,19 @@ function saveInteractiveDB() {
             break;
         }
 
-        if (!cleanHandle.startsWith('@')) {
-            cleanHandle = '@' + cleanHandle;
+        if (!cleanTag.startsWith('@')) {
+            cleanTag = '@' + cleanTag;
         }
 
-        if (cleanId === '41' && cleanHandle === '@maria63') {
-            cleanHandle = '@mariiia63';
+        if (cleanId === '41' && cleanTag === '@maria63') {
+            cleanTag = '@mariiia63';
         }
 
         seenIds.add(cleanId);
         newDb[cleanId] = {
             name: cleanName || `Оп ${cleanId}`,
-            handle: cleanHandle
+            tag: cleanTag,
+            handle: cleanTag
         };
     }
 
@@ -189,7 +190,7 @@ function saveInteractiveDB() {
     localStorage.setItem('operator_db', JSON.stringify(db));
     toggleModal();
     processInput();
-    alert(`Зміни успішно збережено! Всього операторів у базі: ${Object.keys(db).length}`);
+    alert(`Зміни збережено! Всього операторів: ${Object.keys(db).length}`);
 }
 
 function handleFileImport(event) {
@@ -208,28 +209,30 @@ function handleFileImport(event) {
 
                 if (Array.isArray(parsed)) {
                     parsed.forEach(item => {
-                        const id = item.id || item.idVal || item['№ оп'] || item['номер'];
-                        const tag = item.handle || item.tag || item.telegram || item.тег;
-                        const name = item.name || item['ім\'я'] || item['имя'] || `Оп ${id}`;
-                        if (id && tag) {
-                            let handle = String(tag).trim();
-                            if (!handle.startsWith('@')) handle = '@' + handle;
+                        const id = item.id || item.idVal || item['№ оп'] || item['номер'] || item['оп'];
+                        const rawTag = item.tag || item.handle || item.telegram || item['тег'] || item['нік'];
+                        const rawName = item.name || item['ім\'я'] || item['имя'] || item['піб'] || item['оператор'];
+                        if (id && rawTag) {
+                            let tag = String(rawTag).trim();
+                            if (!tag.startsWith('@')) tag = '@' + tag;
                             const cleanId = String(id).trim();
-                            if (cleanId === '41' && handle === '@maria63') handle = '@mariiia63';
-                            importedDB[cleanId] = { name: String(name).trim(), handle };
+                            if (cleanId === '41' && tag === '@maria63') tag = '@mariiia63';
+                            const name = rawName && String(rawName).trim() ? String(rawName).trim() : (db[cleanId]?.name || `Оп ${cleanId}`);
+                            importedDB[cleanId] = { name, tag, handle: tag };
                         }
                     });
                 } else if (parsed && typeof parsed === 'object') {
                     for (const [key, val] of Object.entries(parsed)) {
                         if (val && typeof val === 'object') {
-                            const tag = val.handle || val.tag || val.telegram || val.тег || '';
-                            let handle = String(tag).trim();
-                            if (handle && !handle.startsWith('@')) handle = '@' + handle;
+                            const rawTag = val.tag || val.handle || val.telegram || val['тег'] || '';
+                            let tag = String(rawTag).trim();
+                            if (tag && !tag.startsWith('@')) tag = '@' + tag;
                             const cleanId = String(key).trim();
-                            if (cleanId === '41' && handle === '@maria63') handle = '@mariiia63';
-                            const name = val.name || val['ім\'я'] || `Оп ${key}`;
-                            if (handle) {
-                                importedDB[cleanId] = { name: String(name).trim(), handle };
+                            if (cleanId === '41' && tag === '@maria63') tag = '@mariiia63';
+                            const rawName = val.name || val['ім\'я'] || val['имя'] || val['піб'];
+                            const name = rawName && String(rawName).trim() ? String(rawName).trim() : (db[cleanId]?.name || `Оп ${key}`);
+                            if (tag) {
+                                importedDB[cleanId] = { name, tag, handle: tag };
                             }
                         }
                     }
@@ -291,12 +294,12 @@ function handleFileImport(event) {
 
                     if (idVal !== null && idVal !== undefined && tagVal) {
                         const id = String(idVal).trim();
-                        let handle = String(tagVal).trim();
-                        if (!handle.startsWith('@')) handle = '@' + handle;
-                        if (id === '41' && handle === '@maria63') handle = '@mariiia63';
-                        const name = nameVal && String(nameVal).trim() ? String(nameVal).trim() : `Оп ${id}`;
+                        let tag = String(tagVal).trim();
+                        if (!tag.startsWith('@')) tag = '@' + tag;
+                        if (id === '41' && tag === '@maria63') tag = '@mariiia63';
+                        const name = nameVal && String(nameVal).trim() ? String(nameVal).trim() : (db[id]?.name || `Оп ${id}`);
                         if (id) {
-                            importedDB[id] = { name, handle };
+                            importedDB[id] = { name, tag, handle: tag };
                         }
                     }
                 });
@@ -333,7 +336,7 @@ function processInput() {
     if (!grid) return;
 
     if (!db || Object.keys(db).length === 0) {
-        grid.innerHTML = '<div style="grid-column: 1 / -1; color: var(--warn); padding: 14px; background: rgba(231, 76, 60, 0.1); border-radius: 8px; border: 1px dashed var(--warn); font-size: 14px; text-align: center;">⚠️ База операторів порожня. Натисніть кнопку <strong>"Import Base"</strong> та оберіть файл з тегами (.xlsx / .json).</div>';
+        grid.innerHTML = '<div style="grid-column: 1 / -1; color: var(--warn); padding: 12px; background: rgba(231, 76, 60, 0.08); border-radius: 8px; border: 1px dashed var(--warn); font-size: 14px; text-align: center;">База операторів порожня. Натисніть "Import Base" та оберіть файл з тегами.</div>';
         updateTags();
         return;
     }
@@ -353,10 +356,12 @@ function processInput() {
             div.innerHTML = `⚠️ ${escapeHtml(id)}: Немає в базі`;
         } else {
             const displayName = op.name && op.name.trim() ? op.name.trim() : `Оп ${id}`;
+            const tag = op.tag || op.handle || '';
             div.className = 'card active';
             div.innerHTML = `<input type="checkbox" checked onchange="this.parentElement.classList.toggle('active'); updateTags()">
-                             <strong>${escapeHtml(displayName)}</strong><br><small>${escapeHtml(op.handle)}</small>`;
-            div.dataset.handle = op.handle;
+                             <strong>${escapeHtml(displayName)}</strong><br><small>${escapeHtml(tag)}</small>`;
+            div.dataset.tag = tag;
+            div.dataset.handle = tag;
         }
 
         grid.appendChild(div);
@@ -368,7 +373,7 @@ function processInput() {
 function updateTags() {
     const activeCards = Array.from(document.querySelectorAll('.card.active'));
     const tags = activeCards
-        .map(card => card.dataset.handle)
+        .map(card => card.dataset.tag || card.dataset.handle)
         .filter(Boolean);
 
     const resultArea = document.getElementById('tagResult');
