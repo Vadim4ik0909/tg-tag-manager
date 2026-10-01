@@ -34,6 +34,20 @@ function loadDB() {
 
 let db = loadDB();
 let editingDbList = [];
+let dbStatusFilter = 'all';
+
+function isDismissed(item) {
+    return String(item?.name || '').trim().toLowerCase().includes('звільн');
+}
+
+function setDbStatusFilter(filter, btn) {
+    dbStatusFilter = filter || 'all';
+    if (btn && btn.parentElement) {
+        btn.parentElement.querySelectorAll('.btn-filter').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+    }
+    renderDbTableRows();
+}
 
 function escapeHtml(str) {
     if (!str) return '';
@@ -68,6 +82,14 @@ function toggleModal() {
         
         const searchInput = document.getElementById('dbSearch');
         if (searchInput) searchInput.value = '';
+
+        dbStatusFilter = 'all';
+        const filterGroup = document.querySelector('.status-filter-group');
+        if (filterGroup) {
+            filterGroup.querySelectorAll('.btn-filter').forEach(b => b.classList.remove('active'));
+            const allBtn = filterGroup.querySelector('.btn-filter');
+            if (allBtn) allBtn.classList.add('active');
+        }
         
         renderDbTableRows();
     }
@@ -105,12 +127,19 @@ function renderDbTableRows() {
     const filtered = editingDbList
         .map((item, originalIndex) => ({ item, originalIndex }))
         .filter(({ item }) => {
-            if (!searchQuery) return true;
-            return (
+            const matchesSearch = !searchQuery || (
                 String(item.id).toLowerCase().includes(searchQuery) ||
                 String(item.name).toLowerCase().includes(searchQuery) ||
                 String(item.tag).toLowerCase().includes(searchQuery)
             );
+            if (!matchesSearch) return false;
+
+            if (dbStatusFilter === 'active') {
+                return !isDismissed(item);
+            } else if (dbStatusFilter === 'dismissed') {
+                return isDismissed(item);
+            }
+            return true;
         });
 
     if (filtered.length === 0) {
@@ -125,10 +154,15 @@ function renderDbTableRows() {
         row.className = 'db-row';
         row.dataset.originalIndex = originalIndex;
 
+        const dismissed = isDismissed(item);
+        const statusLabel = dismissed ? 'Звільнився' : 'Активний';
+        const statusClass = dismissed ? 'dismissed' : 'active';
+
         row.innerHTML = `
             <input type="text" class="row-id" placeholder="ID" value="${escapeHtml(item.id)}" title="Номер ID">
             <input type="text" class="row-name" placeholder="Ім'я" value="${escapeHtml(item.name)}" title="Ім'я оператора">
             <input type="text" class="row-handle" placeholder="@тег" value="${escapeHtml(item.tag)}" title="Telegram-тег">
+            <div class="status-col" style="display:flex; justify-content:center;"><span class="status-badge ${statusClass}">${statusLabel}</span></div>
             <button type="button" class="btn-del" title="Видалити" onclick="deleteDbRow(${originalIndex})">✕</button>
         `;
         container.appendChild(row);
@@ -413,29 +447,44 @@ function exportDbToExcel() {
         return;
     }
 
-    const ids = Object.keys(db || {});
-    if (ids.length === 0) {
+    if (!db || Object.keys(db).length === 0) {
         alert('База порожня. Немає даних для експорту.');
         return;
     }
 
+    const ids = Object.keys(db);
     ids.sort((a, b) => (parseInt(a, 10) || 0) - (parseInt(b, 10) || 0));
 
-    const exportRows = ids.map(id => {
+    const allRows = ids.map(id => {
         const op = db[id] || {};
+        const dismissed = isDismissed(op);
         return {
-            "№ оп": Number(id) || id,
+            "ID": Number(id) || id,
             "Ім'я": op.name || '',
-            "Telegram": op.tag || op.handle || ''
+            "Telegram Handle": op.tag || op.handle || '',
+            "Статус": dismissed ? "Звільнився" : "Активний"
         };
     });
 
-    const worksheet = XLSX.utils.json_to_sheet(exportRows);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Оператори');
+    const activeRows = allRows.filter(r => r["Статус"] === "Активний");
+    const dismissedRows = allRows.filter(r => r["Статус"] === "Звільнився");
 
-    const dateStr = new Date().toISOString().slice(0, 10);
-    XLSX.writeFile(workbook, `Теги_операторів_${dateStr}.xlsx`);
+    const wb = XLSX.utils.book_new();
+    const colWidths = [{ wch: 8 }, { wch: 24 }, { wch: 22 }, { wch: 14 }];
+
+    const wsAll = XLSX.utils.json_to_sheet(allRows);
+    wsAll['!cols'] = colWidths;
+    XLSX.utils.book_append_sheet(wb, wsAll, 'Усі співробітники');
+
+    const wsActive = XLSX.utils.json_to_sheet(activeRows);
+    wsActive['!cols'] = colWidths;
+    XLSX.utils.book_append_sheet(wb, wsActive, 'Активні');
+
+    const wsDismissed = XLSX.utils.json_to_sheet(dismissedRows);
+    wsDismissed['!cols'] = colWidths;
+    XLSX.utils.book_append_sheet(wb, wsDismissed, 'Звільнені');
+
+    XLSX.writeFile(wb, 'employees_report.xlsx');
 }
 
 function clearCache() {
