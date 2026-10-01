@@ -439,9 +439,87 @@
             pointer-events: auto;
         }
 
+        .version-badge {
+            position: fixed;
+            bottom: 16px;
+            left: 16px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            background: var(--tg-card);
+            color: var(--tg-text-muted);
+            border: 1px solid var(--tg-border);
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            z-index: 100;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+            user-select: none;
+        }
+        .version-badge:hover {
+            color: var(--tg-accent);
+            border-color: var(--tg-accent);
+            background: var(--tg-card-hover);
+            transform: translateY(-1px);
+        }
+        .badge-dot {
+            width: 7px;
+            height: 7px;
+            background: var(--tg-success);
+            border-radius: 50%;
+            display: inline-block;
+            box-shadow: 0 0 6px var(--tg-success);
+        }
+
+        .changelog-card {
+            background: var(--tg-input-bg);
+            border: 1px solid var(--tg-border);
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-bottom: 12px;
+        }
+        .changelog-ver-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            padding-bottom: 6px;
+        }
+        .changelog-ver-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--tg-accent);
+        }
+        .changelog-ver-date {
+            font-size: 12px;
+            color: var(--tg-text-muted);
+        }
+        .changelog-list {
+            margin: 0;
+            padding-left: 18px;
+            font-size: 13px;
+            line-height: 1.6;
+            color: var(--tg-text);
+        }
+        .changelog-tag {
+            font-size: 10px;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 4px;
+            text-transform: uppercase;
+            margin-right: 4px;
+        }
+        .changelog-tag.added { background: rgba(0, 199, 118, 0.15); color: var(--tg-success); border: 1px solid rgba(0, 199, 118, 0.3); }
+        .changelog-tag.fixed { background: rgba(46, 166, 255, 0.15); color: var(--tg-accent); border: 1px solid rgba(46, 166, 255, 0.3); }
+        .changelog-tag.security { background: rgba(229, 57, 53, 0.15); color: var(--tg-warn); border: 1px solid rgba(229, 57, 53, 0.3); }
+
         /* Mobile Responsive media query */
         @media (max-width: 640px) {
-            body { padding: 12px; }
+            body { padding: 12px; padding-bottom: 48px; }
             h2 { font-size: 20px; }
             .controls-grid {
                 display: grid;
@@ -493,6 +571,10 @@
 
 <div id="toastNotification" class="toast">✓ Теги успішно скопійовано!</div>
 
+<div id="appVersionBadge" class="version-badge" onclick="toggleChangelogModal()" title="Історія оновлень">
+    <span class="badge-dot"></span> v1.4.0
+</div>
+
 <div class="container">
     <h2>Telegram Tag Manager</h2>
     <textarea id="inputIds" placeholder="Введіть номери: 1, (31), 60"></textarea>
@@ -518,7 +600,7 @@
         <div class="modal-header">
             <div class="modal-title-row">
                 <h3 class="modal-title">Редагування бази</h3>
-                <span id="dbTotalCounter" style="color:var(--text-secondary); font-size:13px;">Всього: 0</span>
+                <span id="dbTotalCounter" style="color:var(--tg-text-muted); font-size:13px;">Всього: 0</span>
             </div>
             <div class="modal-toolbar">
                 <input type="text" id="dbSearch" class="search-box" placeholder="Пошук за ID, ім'ям або тегом..." oninput="renderDbTableRows()">
@@ -534,11 +616,37 @@
             <div id="dbTableContainer" class="db-table-container"></div>
         </div>
         <div class="modal-footer">
-            <span style="font-size:13px; color:var(--text-secondary);">Зберігається локально у браузері</span>
+            <span style="font-size:13px; color:var(--tg-text-muted);">Зберігається локально у браузері</span>
             <div class="modal-footer-btns">
                 <button type="button" onclick="exportDbToExcel()" class="btn-import">Export Excel</button>
                 <button onclick="saveInteractiveDB()">Save & Reload</button>
                 <button onclick="toggleModal()" class="btn-danger">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="changelogModal" class="modal">
+    <div class="modal-content" style="max-width: 700px;">
+        <div class="modal-header">
+            <div class="modal-title-row">
+                <h3 class="modal-title">Історія оновлень (Changelog)</h3>
+                <span style="color:var(--tg-accent); font-size:13px; font-weight:600;">TG Tag Manager PRO</span>
+            </div>
+            <div class="modal-toolbar">
+                <div class="status-filter-group" style="display:flex; gap:4px; margin-left:0; flex-wrap:wrap;">
+                    <button type="button" class="btn-filter active" onclick="filterChangelog('all', this)">Усі</button>
+                    <button type="button" class="btn-filter" onclick="filterChangelog('Added', this)">Added</button>
+                    <button type="button" class="btn-filter" onclick="filterChangelog('Fixed', this)">Fixed</button>
+                    <button type="button" class="btn-filter" onclick="filterChangelog('Security', this)">Security</button>
+                </div>
+            </div>
+        </div>
+        <div class="modal-body" id="changelogContainer" style="max-height: 56vh;"></div>
+        <div class="modal-footer">
+            <span style="font-size:13px; color:var(--tg-text-muted);">Поточна версія: v1.4.0</span>
+            <div class="modal-footer-btns">
+                <button onclick="toggleChangelogModal()" class="btn-secondary">Закрити</button>
             </div>
         </div>
     </div>

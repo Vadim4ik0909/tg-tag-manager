@@ -661,3 +661,141 @@ window.addEventListener('DOMContentLoaded', async () => {
     updateButtonStates();
     processInput();
 });
+
+const APP_CHANGELOG = [
+    {
+        version: "1.4.0",
+        date: "2026-10-01",
+        changes: [
+            { category: "Added", text: "Інтерактивний віджет версії v1.4.0 у лівому нижньому куті." },
+            { category: "Added", text: "Вбудоване модальне вікно Changelog з фільтрацією за категоріями (Added / Fixed / Security)." }
+        ]
+    },
+    {
+        version: "1.3.5",
+        date: "2026-10-01",
+        changes: [
+            { category: "Added", text: "Фірмовий векторний Telegram SVG-фавікон та apple-touch-icon." }
+        ]
+    },
+    {
+        version: "1.3.4",
+        date: "2026-10-01",
+        changes: [
+            { category: "Added", text: "Відстеження та архівація історії зміни власників ID операторів (history)." },
+            { category: "Added", text: "В експорті Excel аркуш «Звільнені» включає як поточних, так і історичних звільнених співробітників." }
+        ]
+    },
+    {
+        version: "1.3.3",
+        date: "2026-10-01",
+        changes: [
+            { category: "Added", text: "Повний рестайлінг інтерфейсу під автентичну тему Telegram Desktop / Web Dark Theme." }
+        ]
+    },
+    {
+        version: "1.3.2",
+        date: "2026-10-01",
+        changes: [
+            { category: "Added", text: "Неблокуючі плаваючі сповіщення (Toast notifications) при копіюванні тегів замість alert()." },
+            { category: "Added", text: "Інтерактивний зворотний зв'язок на кнопці «Copy to Clipboard»." }
+        ]
+    },
+    {
+        version: "1.3.1",
+        date: "2026-10-01",
+        changes: [
+            { category: "Added", text: "Outline/Ghost редизайн кнопок та реактивний менеджер станів." }
+        ]
+    },
+    {
+        version: "1.3.0",
+        date: "2026-10-01",
+        changes: [
+            { category: "Added", text: "Фільтрація статусів (Усі / Активні / Звільнені) у модальному вікні редагування бази." },
+            { category: "Added", text: "Багатосторінковий Excel-експорт (employees_report.xlsx) із 3 вкладками." }
+        ]
+    },
+    {
+        version: "1.2.9",
+        date: "2026-10-01",
+        changes: [
+            { category: "Added", text: "Клієнтський експорт бази операторів у Excel." },
+            { category: "Security", text: "Політика Zero-Leak: DEFAULT_DB = {} залишається суворо порожнім." }
+        ]
+    },
+    {
+        version: "1.2.8",
+        date: "2026-10-01",
+        changes: [
+            { category: "Fixed", text: "Автоматична санітизація імен операторів у loadDB() (очищення технічних шаблонів Оп #id)." }
+        ]
+    }
+];
+
+let changelogCategoryFilter = 'all';
+
+function toggleChangelogModal() {
+    const modal = document.getElementById('changelogModal');
+    if (!modal) return;
+    const shouldOpen = modal.style.display !== 'flex';
+    modal.style.display = shouldOpen ? 'flex' : 'none';
+    if (shouldOpen) {
+        changelogCategoryFilter = 'all';
+        const filterGroup = modal.querySelector('.status-filter-group');
+        if (filterGroup) {
+            filterGroup.querySelectorAll('.btn-filter').forEach(b => b.classList.remove('active'));
+            const allBtn = filterGroup.querySelector('.btn-filter');
+            if (allBtn) allBtn.classList.add('active');
+        }
+        renderChangelog();
+    }
+}
+
+function filterChangelog(category, btn) {
+    changelogCategoryFilter = category || 'all';
+    if (btn && btn.parentElement) {
+        btn.parentElement.querySelectorAll('.btn-filter').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+    }
+    renderChangelog();
+}
+
+function renderChangelog() {
+    const container = document.getElementById('changelogContainer');
+    if (!container) return;
+    container.innerHTML = '';
+
+    const filteredReleases = APP_CHANGELOG.map(rel => {
+        const filteredChanges = rel.changes.filter(ch => {
+            if (changelogCategoryFilter === 'all') return true;
+            return ch.category.toLowerCase() === changelogCategoryFilter.toLowerCase();
+        });
+        return { ...rel, changes: filteredChanges };
+    }).filter(rel => rel.changes.length > 0);
+
+    if (filteredReleases.length === 0) {
+        container.innerHTML = '<div style="text-align:center; color:var(--tg-text-muted); padding:24px;">Немає записів у цій категорії.</div>';
+        return;
+    }
+
+    filteredReleases.forEach(rel => {
+        const card = document.createElement('div');
+        card.className = 'changelog-card';
+        card.innerHTML = `
+            <div class="changelog-ver-header">
+                <span class="changelog-ver-title">v${escapeHtml(rel.version)}</span>
+                <span class="changelog-ver-date">${escapeHtml(rel.date)}</span>
+            </div>
+            <ul class="changelog-list">
+                ${rel.changes.map(ch => `
+                    <li>
+                        <span class="changelog-tag ${ch.category.toLowerCase()}">${escapeHtml(ch.category)}</span>
+                        ${escapeHtml(ch.text)}
+                    </li>
+                `).join('')}
+            </ul>
+        `;
+        container.appendChild(card);
+    });
+}
