@@ -2,7 +2,7 @@ const DEFAULT_DB = {};
 
 function loadDB() {
     try {
-        const raw = localStorage.getItem('opsDB');
+        const raw = localStorage.getItem('opsDB') || localStorage.getItem('operator_db');
         if (!raw) return {};
         const parsed = JSON.parse(raw);
         if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
@@ -15,12 +15,20 @@ function loadDB() {
 }
 
 let db = loadDB();
+let editingDbList = [];
+
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+}
 
 function ensureDbEditor() {
-    const editor = document.getElementById('dbEditor');
-    if (editor) {
-        editor.value = JSON.stringify(db, null, 2);
-    }
+    renderDbTableRows();
 }
 
 function toggleModal() {
@@ -31,27 +39,157 @@ function toggleModal() {
     modal.style.display = shouldOpen ? 'flex' : 'none';
 
     if (shouldOpen) {
-        ensureDbEditor();
+        editingDbList = Object.keys(db).map(id => ({
+            id: String(id),
+            name: db[id]?.name || '',
+            handle: db[id]?.handle || ''
+        }));
+        
+        // Сортуємо за числовим ID
+        editingDbList.sort((a, b) => (parseInt(a.id, 10) || 0) - (parseInt(b.id, 10) || 0));
+        
+        const searchInput = document.getElementById('dbSearch');
+        if (searchInput) searchInput.value = '';
+        
+        renderDbTableRows();
     }
 }
 
-function saveDB() {
-    const editor = document.getElementById('dbEditor');
-    if (!editor) return;
+function syncEditingDbFromDom() {
+    const rows = document.querySelectorAll('#dbTableContainer .db-row');
+    rows.forEach(row => {
+        const origIdx = parseInt(row.dataset.originalIndex, 10);
+        if (!isNaN(origIdx) && editingDbList[origIdx]) {
+            const idInput = row.querySelector('.row-id');
+            const nameInput = row.querySelector('.row-name');
+            const handleInput = row.querySelector('.row-handle');
 
-    try {
-        const parsed = JSON.parse(editor.value);
-        if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-            throw new Error('DB must be an object');
+            if (idInput) editingDbList[origIdx].id = idInput.value;
+            if (nameInput) editingDbList[origIdx].name = nameInput.value;
+            if (handleInput) editingDbList[origIdx].handle = handleInput.value;
+        }
+    });
+}
+
+function renderDbTableRows() {
+    syncEditingDbFromDom();
+    const container = document.getElementById('dbTableContainer');
+    const counter = document.getElementById('dbTotalCounter');
+    const searchQuery = (document.getElementById('dbSearch')?.value || '').trim().toLowerCase();
+
+    if (counter) {
+        counter.innerText = `Всього: ${editingDbList.length}`;
+    }
+
+    if (!container) return;
+    container.innerHTML = '';
+
+    const filtered = editingDbList
+        .map((item, originalIndex) => ({ item, originalIndex }))
+        .filter(({ item }) => {
+            if (!searchQuery) return true;
+            return (
+                String(item.id).toLowerCase().includes(searchQuery) ||
+                String(item.name).toLowerCase().includes(searchQuery) ||
+                String(item.handle).toLowerCase().includes(searchQuery)
+            );
+        });
+
+    if (filtered.length === 0) {
+        container.innerHTML = `<div style="text-align: center; color: var(--text-secondary); padding: 24px 10px; font-size: 14px;">
+            ${editingDbList.length === 0 ? 'База порожня. Натисніть "+ Додати", щоб створити запис.' : 'Нічого не знайдено за запитом.'}
+        </div>`;
+        return;
+    }
+
+    filtered.forEach(({ item, originalIndex }) => {
+        const row = document.createElement('div');
+        row.className = 'db-row';
+        row.dataset.originalIndex = originalIndex;
+
+        row.innerHTML = `
+            <input type="text" class="row-id" placeholder="ID" value="${escapeHtml(item.id)}" title="Номер ID">
+            <input type="text" class="row-name" placeholder="Ім'я" value="${escapeHtml(item.name)}" title="Ім'я оператора">
+            <input type="text" class="row-handle" placeholder="@тег" value="${escapeHtml(item.handle)}" title="Telegram-тег">
+            <button type="button" class="btn-del" title="Видалити запис" onclick="deleteDbRow(${originalIndex})">🗑️</button>
+        `;
+        container.appendChild(row);
+    });
+}
+
+function addNewDbRow() {
+    syncEditingDbFromDom();
+    editingDbList.unshift({ id: '', name: '', handle: '' });
+    renderDbTableRows();
+    const firstInput = document.querySelector('.db-row input.row-id');
+    if (firstInput) firstInput.focus();
+}
+
+function deleteDbRow(index) {
+    syncEditingDbFromDom();
+    if (index >= 0 && index < editingDbList.length) {
+        editingDbList.splice(index, 1);
+        renderDbTableRows();
+    }
+}
+
+function saveInteractiveDB() {
+    syncEditingDbFromDom();
+    const newDb = {};
+    const seenIds = new Set();
+    let hasErrors = false;
+
+    for (let i = 0; i < editingDbList.length; i++) {
+        const item = editingDbList[i];
+        const cleanId = String(item.id || '').trim();
+        let cleanHandle = String(item.handle || '').trim();
+        const cleanName = String(item.name || '').trim();
+
+        if (!cleanId && !cleanHandle && !cleanName) {
+            continue; // Пропускаємо порожні рядки
         }
 
-        db = parsed;
-        localStorage.setItem('opsDB', JSON.stringify(db));
-        toggleModal();
-        processInput();
-    } catch (error) {
-        alert('Невалідний JSON бази. Перевірте синтаксис.');
+        if (!cleanId) {
+            alert(`Рядок #${i + 1}: ID не може бути порожнім`);
+            hasErrors = true;
+            break;
+        }
+
+        if (!cleanHandle) {
+            alert(`Рядок #${i + 1} (ID: ${cleanId}): Telegram-тег не може бути порожнім`);
+            hasErrors = true;
+            break;
+        }
+
+        if (seenIds.has(cleanId)) {
+            alert(`Помилка: дублікат ID "${cleanId}". Кожен номер повинен бути унікальним.`);
+            hasErrors = true;
+            break;
+        }
+
+        if (!cleanHandle.startsWith('@')) {
+            cleanHandle = '@' + cleanHandle;
+        }
+
+        if (cleanId === '41' && cleanHandle === '@maria63') {
+            cleanHandle = '@mariiia63';
+        }
+
+        seenIds.add(cleanId);
+        newDb[cleanId] = {
+            name: cleanName || `Оп ${cleanId}`,
+            handle: cleanHandle
+        };
     }
+
+    if (hasErrors) return;
+
+    db = newDb;
+    localStorage.setItem('opsDB', JSON.stringify(db));
+    localStorage.setItem('operator_db', JSON.stringify(db));
+    toggleModal();
+    processInput();
+    alert(`Зміни успішно збережено! Всього операторів у базі: ${Object.keys(db).length}`);
 }
 
 function handleFileImport(event) {
@@ -103,7 +241,7 @@ function handleFileImport(event) {
 
                 db = importedDB;
                 localStorage.setItem('opsDB', JSON.stringify(db));
-                ensureDbEditor();
+                localStorage.setItem('operator_db', JSON.stringify(db));
                 processInput();
                 alert(`Успішно імпортовано: ${Object.keys(db).length} операторів`);
             } catch (err) {
@@ -169,7 +307,7 @@ function handleFileImport(event) {
 
                 db = importedDB;
                 localStorage.setItem('opsDB', JSON.stringify(db));
-                ensureDbEditor();
+                localStorage.setItem('operator_db', JSON.stringify(db));
                 processInput();
                 alert(`Успішно імпортовано: ${Object.keys(db).length} операторів`);
             } catch (err) {
@@ -216,7 +354,7 @@ function processInput() {
         } else {
             div.className = 'card active';
             div.innerHTML = `<input type="checkbox" checked onchange="this.parentElement.classList.toggle('active'); updateTags()">
-                             <strong>${op.name} (#${id})</strong><br><small>${op.handle}</small>`;
+                             <strong>${escapeHtml(op.name)} (#${escapeHtml(id)})</strong><br><small>${escapeHtml(op.handle)}</small>`;
             div.dataset.handle = op.handle;
         }
 
@@ -242,8 +380,8 @@ function updateTags() {
 function clearCache() {
     if (confirm("Скинути базу до порожньої?")) {
         localStorage.removeItem('opsDB');
+        localStorage.removeItem('operator_db');
         db = {};
-        ensureDbEditor();
         processInput();
     }
 }
@@ -270,6 +408,5 @@ function fallbackCopy(area) {
 }
 
 window.addEventListener('DOMContentLoaded', () => {
-    ensureDbEditor();
     processInput();
 });
