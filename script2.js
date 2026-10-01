@@ -189,15 +189,16 @@ function processInput() {
     const grid = document.getElementById('operatorGrid');
     if (!grid) return;
 
-    if (Object.keys(db).length === 0) {
-        grid.innerHTML = '<div style="grid-column: 1 / -1; color: var(--warn); padding: 12px; background: rgba(231, 76, 60, 0.1); border-radius: 8px; border: 1px dashed var(--warn); font-size: 14px;">⚠️ База порожня. Натисніть &quot;Import Base&quot; та оберіть файл з тегами</div>';
+    if (!db || Object.keys(db).length === 0) {
+        grid.innerHTML = '<div style="grid-column: 1 / -1; color: var(--warn); padding: 14px; background: rgba(231, 76, 60, 0.1); border-radius: 8px; border: 1px dashed var(--warn); font-size: 14px; text-align: center;">⚠️ База операторів порожня. Натисніть кнопку <strong>"Import Base"</strong> та оберіть файл з тегами (.xlsx / .json).</div>';
         updateTags();
         return;
     }
 
     const input = document.getElementById('inputIds')?.value || '';
     grid.innerHTML = '';
-    const uniqueIds = [...new Set(input.match(/\d+/g) || [])];
+    const rawIds = input.match(/\d+/g) || [];
+    const uniqueIds = [...new Set(rawIds)];
 
     uniqueIds.forEach(id => {
         const op = db[id];
