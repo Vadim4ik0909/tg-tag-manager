@@ -523,13 +523,46 @@ function clearCache() {
     }
 }
 
+let toastTimeout = null;
+function showToast(message = '✓ Теги успішно скопійовано!') {
+    const toast = document.getElementById('toastNotification');
+    if (!toast) return;
+    toast.innerText = message;
+    toast.classList.add('show');
+    if (toastTimeout) clearTimeout(toastTimeout);
+    toastTimeout = setTimeout(() => {
+        toast.classList.remove('show');
+    }, 2500);
+}
+
+function handleCopySuccess() {
+    showToast('✓ Теги успішно скопійовано!');
+    const btn = document.getElementById('btnCopyTags');
+    if (btn) {
+        const origText = btn.innerText;
+        btn.innerText = '✓ Скопійовано!';
+        btn.style.backgroundColor = 'var(--import-btn)';
+        btn.style.borderColor = 'var(--import-btn)';
+        setTimeout(() => {
+            btn.innerText = origText;
+            btn.style.backgroundColor = '';
+            btn.style.borderColor = '';
+        }, 1500);
+    }
+}
+
 function copyTags() {
     const area = document.getElementById('tagResult');
     if (!area) return;
 
+    if (!area.value.trim()) {
+        showToast('⚠️ Немає вибраних тегів для копіювання');
+        return;
+    }
+
     if (navigator.clipboard && window.isSecureContext) {
         navigator.clipboard.writeText(area.value)
-            .then(() => alert('Скопійовано!'))
+            .then(() => handleCopySuccess())
             .catch(() => fallbackCopy(area));
         return;
     }
@@ -540,8 +573,12 @@ function copyTags() {
 function fallbackCopy(area) {
     area.focus();
     area.select();
-    document.execCommand('copy');
-    alert('Скопійовано!');
+    try {
+        document.execCommand('copy');
+        handleCopySuccess();
+    } catch (err) {
+        showToast('❌ Помилка копіювання');
+    }
 }
 
 window.addEventListener('DOMContentLoaded', async () => {

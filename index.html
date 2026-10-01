@@ -386,6 +386,32 @@
             gap: 8px;
         }
 
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translate(-50%, 20px);
+            background: #10b981;
+            color: #ffffff;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1), transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 2000;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .toast.show {
+            opacity: 1;
+            transform: translate(-50%, 0);
+            pointer-events: auto;
+        }
+
         /* Mobile Responsive media query */
         @media (max-width: 640px) {
             body { padding: 12px; }
@@ -438,6 +464,8 @@
 <body>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
 
+<div id="toastNotification" class="toast">✓ Теги успішно скопійовано!</div>
+
 <div class="container">
     <h2>Telegram Tag Manager</h2>
     <textarea id="inputIds" placeholder="Введіть номери: 1, (31), 60"></textarea>
@@ -455,7 +483,7 @@
     <div class="grid" id="operatorGrid"></div>
 
     <textarea id="tagResult" readonly placeholder="Результат тегів..." style="margin-top:10px;"></textarea>
-    <button onclick="copyTags()" style="margin-top:10px; width:100%;">Copy to Clipboard</button>
+    <button id="btnCopyTags" onclick="copyTags()" style="margin-top:10px; width:100%;">Copy to Clipboard</button>
 </div>
 
 <div id="dbModal" class="modal">
