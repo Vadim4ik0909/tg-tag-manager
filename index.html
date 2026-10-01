@@ -340,6 +340,7 @@
     <div class="controls-grid">
         <button onclick="processInput()">Process IDs</button>
         <button onclick="document.getElementById('fileImporter').click()" class="btn-import">Import Base (Excel/JSON)</button>
+        <button type="button" onclick="exportDbToExcel()" class="btn-secondary">Export Base (Excel)</button>
         <input type="file" id="fileImporter" accept=".xlsx, .xls, .json" style="display:none;" onchange="handleFileImport(event)">
         <button onclick="toggleModal()" class="btn-secondary">Edit Base</button>
         <button onclick="clearCache()" class="btn-danger">Reset All</button>
@@ -370,6 +371,7 @@
         <div class="modal-footer">
             <span style="font-size:13px; color:var(--text-secondary);">Зберігається локально у браузері</span>
             <div class="modal-footer-btns">
+                <button type="button" onclick="exportDbToExcel()" class="btn-import">Export Excel</button>
                 <button onclick="saveInteractiveDB()">Save & Reload</button>
                 <button onclick="toggleModal()" class="btn-danger">Close</button>
             </div>

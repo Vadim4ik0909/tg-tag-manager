@@ -407,6 +407,37 @@ function updateTags() {
     if (counter) counter.innerText = `Вибрано: ${tags.length}`;
 }
 
+function exportDbToExcel() {
+    if (typeof XLSX === 'undefined') {
+        alert('Бібліотеку SheetJS ще не завантажено. Перевірте з\'єднання з інтернетом.');
+        return;
+    }
+
+    const ids = Object.keys(db || {});
+    if (ids.length === 0) {
+        alert('База порожня. Немає даних для експорту.');
+        return;
+    }
+
+    ids.sort((a, b) => (parseInt(a, 10) || 0) - (parseInt(b, 10) || 0));
+
+    const exportRows = ids.map(id => {
+        const op = db[id] || {};
+        return {
+            "№ оп": Number(id) || id,
+            "Ім'я": op.name || '',
+            "Telegram": op.tag || op.handle || ''
+        };
+    });
+
+    const worksheet = XLSX.utils.json_to_sheet(exportRows);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Оператори');
+
+    const dateStr = new Date().toISOString().slice(0, 10);
+    XLSX.writeFile(workbook, `Теги_операторів_${dateStr}.xlsx`);
+}
+
 function clearCache() {
     if (confirm("Скинути базу до порожньої?")) {
         localStorage.removeItem('opsDB');
@@ -439,6 +470,31 @@ function fallbackCopy(area) {
     alert('Скопійовано!');
 }
 
-window.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('DOMContentLoaded', async () => {
+    if (!localStorage.getItem('opsDB') && !localStorage.getItem('operator_db')) {
+        try {
+            const resp = await fetch('./opsDB_backup.json');
+            if (resp.ok) {
+                const backupData = await resp.json();
+                if (backupData && typeof backupData === 'object' && !Array.isArray(backupData)) {
+                    const sanitized = {};
+                    for (const [id, op] of Object.entries(backupData)) {
+                        if (op && typeof op === 'object') {
+                            const tag = op.handle || op.tag || '';
+                            const name = sanitizeName(op.name, id);
+                            sanitized[id] = { name, tag, handle: tag };
+                        }
+                    }
+                    if (Object.keys(sanitized).length > 0) {
+                        db = sanitized;
+                        localStorage.setItem('opsDB', JSON.stringify(db));
+                        localStorage.setItem('operator_db', JSON.stringify(db));
+                    }
+                }
+            }
+        } catch (e) {
+            // Тихо пропускаємо, якщо fetch заблоковано в деяких середовищах
+        }
+    }
     processInput();
 });
