@@ -280,11 +280,11 @@ function handleFileImport(event) {
 
                     for (const key of Object.keys(row)) {
                         const cleanKey = key.trim();
-                        if (/^(№\s*оп|id|номер|оп)/i.test(cleanKey) && idVal === null) {
+                        if (/^(№\s*оп|id|номер|оп|№)/i.test(cleanKey) && idVal === null) {
                             idVal = row[key];
-                        } else if (/(telegram|тег|handle|нік|tag)/i.test(cleanKey) && tagVal === null) {
+                        } else if (/(telegram|тег|handle|нік|tag|телеграм|юзернейм|username)/i.test(cleanKey) && tagVal === null) {
                             tagVal = row[key];
-                        } else if (/(ім'я|имя|name|піб)/i.test(cleanKey) && nameVal === null) {
+                        } else if (/(ім'я|имя|name|піб|оператор|співробітник|працівник|прізвище)/i.test(cleanKey) && nameVal === null) {
                             nameVal = row[key];
                         }
                     }
@@ -294,7 +294,7 @@ function handleFileImport(event) {
                         let handle = String(tagVal).trim();
                         if (!handle.startsWith('@')) handle = '@' + handle;
                         if (id === '41' && handle === '@maria63') handle = '@mariiia63';
-                        const name = nameVal ? String(nameVal).trim() : `Оп ${id}`;
+                        const name = nameVal && String(nameVal).trim() ? String(nameVal).trim() : `Оп ${id}`;
                         if (id) {
                             importedDB[id] = { name, handle };
                         }
@@ -350,11 +350,12 @@ function processInput() {
         if (!op) {
             div.className = 'card';
             div.style.borderColor = 'var(--warn)';
-            div.innerHTML = `⚠️ #${id}: Немає в базі`;
+            div.innerHTML = `⚠️ ${escapeHtml(id)}: Немає в базі`;
         } else {
+            const displayName = op.name && op.name.trim() ? op.name.trim() : `Оп ${id}`;
             div.className = 'card active';
             div.innerHTML = `<input type="checkbox" checked onchange="this.parentElement.classList.toggle('active'); updateTags()">
-                             <strong>${escapeHtml(op.name)} (#${escapeHtml(id)})</strong><br><small>${escapeHtml(op.handle)}</small>`;
+                             <strong>${escapeHtml(displayName)}</strong><br><small>${escapeHtml(op.handle)}</small>`;
             div.dataset.handle = op.handle;
         }
 
