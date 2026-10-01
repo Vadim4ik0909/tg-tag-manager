@@ -13,16 +13,16 @@
             --card-hover: #2b394a;
             --border: #33404d;
             --text: #f5f5f5;
-            --text-secondary: #7f91a4;
-            --accent: #5288c1;
-            --accent-hover: #4575a8;
-            --import-btn: #2d5a3f;
-            --import-btn-hover: #254d35;
-            --secondary-btn: #3c4a5c;
-            --secondary-btn-hover: #323e4d;
-            --danger-btn: #a83232;
-            --danger-btn-hover: #8f2828;
-            --warn: #e74c3c;
+            --text-secondary: #94a3b8;
+            --primary-btn: #2563eb;
+            --primary-btn-hover: #1d4ed8;
+            --import-btn: #10b981;
+            --import-btn-hover: #059669;
+            --secondary-btn: #475569;
+            --secondary-btn-hover: #334155;
+            --danger-btn: #ef4444;
+            --danger-btn-hover: #dc2626;
+            --warn: #ef4444;
             --input-bg: #1d2733;
         }
         * { box-sizing: border-box; }
@@ -59,7 +59,7 @@
             font-family: inherit;
         }
         textarea:focus, input[type="text"]:focus, input[type="number"]:focus {
-            border-color: var(--accent);
+            border-color: var(--primary-btn);
         }
         textarea {
             width: 100%;
@@ -73,30 +73,30 @@
             margin-top: 10px;
         }
         button {
-            background: var(--accent);
+            background: var(--primary-btn);
             color: #ffffff;
             border: none;
-            padding: 10px 18px;
+            padding: 11px 18px;
             border-radius: 8px;
             cursor: pointer;
-            font-weight: 500;
+            font-weight: 600;
             font-size: 14px;
             min-height: 42px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            transition: background-color 0.15s, opacity 0.15s;
+            transition: background-color 0.15s, transform 0.05s;
             user-select: none;
             -webkit-tap-highlight-color: transparent;
         }
-        button:hover { opacity: 0.92; }
-        button:active { opacity: 0.85; }
-        .btn-import { background: var(--import-btn); }
-        .btn-import:hover { background: var(--import-btn-hover); }
-        .btn-secondary { background: var(--secondary-btn); }
-        .btn-secondary:hover { background: var(--secondary-btn-hover); }
-        .btn-danger { background: var(--danger-btn); }
-        .btn-danger:hover { background: var(--danger-btn-hover); }
+        button:hover { background-color: var(--primary-btn-hover); }
+        button:active { transform: scale(0.98); }
+        .btn-import { background-color: var(--import-btn); }
+        .btn-import:hover { background-color: var(--import-btn-hover); }
+        .btn-secondary { background-color: var(--secondary-btn); }
+        .btn-secondary:hover { background-color: var(--secondary-btn-hover); }
+        .btn-danger { background-color: var(--danger-btn); }
+        .btn-danger:hover { background-color: var(--danger-btn-hover); }
 
         #opCounter {
             margin: 12px 0 8px 0;
@@ -144,11 +144,11 @@
             padding-left: 21px;
         }
         .card.active {
-            border-color: var(--accent);
-            background: rgba(82, 136, 193, 0.12);
+            border-color: #3b82f6;
+            background: rgba(59, 130, 246, 0.12);
         }
         .card.active .card-subtitle {
-            color: var(--accent);
+            color: #60a5fa;
         }
         .card input[type="checkbox"] {
             margin: 0;
@@ -251,7 +251,7 @@
         .db-row .btn-del {
             background: transparent;
             color: var(--warn);
-            border: 1px solid rgba(231, 76, 60, 0.4);
+            border: 1px solid rgba(239, 68, 68, 0.4);
             padding: 0;
             height: 36px;
             width: 36px;
@@ -264,7 +264,7 @@
             min-height: unset;
         }
         .db-row .btn-del:hover {
-            background: rgba(231, 76, 60, 0.15);
+            background: rgba(239, 68, 68, 0.15);
         }
         .modal-footer {
             padding: 12px 16px;
@@ -328,7 +328,7 @@
     
     <div class="controls-grid">
         <button onclick="processInput()">Process IDs</button>
-        <button onclick="document.getElementById('fileImporter').click()" class="btn-import">Import Base</button>
+        <button onclick="document.getElementById('fileImporter').click()" class="btn-import">Import Base (Excel/JSON)</button>
         <input type="file" id="fileImporter" accept=".xlsx, .xls, .json" style="display:none;" onchange="handleFileImport(event)">
         <button onclick="toggleModal()" class="btn-secondary">Edit Base</button>
         <button onclick="clearCache()" class="btn-danger">Reset All</button>
