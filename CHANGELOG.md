@@ -1,5 +1,9 @@
 # Changelog — Telegram Tag Distribution Manager (TG Tag Manager PRO)
 
+## [1.3.5] - 2026-10-01
+### Added
+- Інлайн SVG-фавікон та `apple-touch-icon` у фірмовому стилі Telegram із градієнтом, літачком та символом `@`.
+
 ## [1.3.4] - 2026-10-01
 ### Added
 - Відстеження та архівація історії зміни власників ID операторів (`history`):
