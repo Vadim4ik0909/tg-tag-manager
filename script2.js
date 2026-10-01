@@ -23,7 +23,8 @@ function loadDB() {
             if (op && typeof op === 'object') {
                 const tag = op.handle || op.tag || '';
                 const name = sanitizeName(op.name, id);
-                sanitized[id] = { name, tag, handle: tag };
+                const history = Array.isArray(op.history) ? op.history.filter(h => h && typeof h === 'object') : [];
+                sanitized[id] = { name, tag, handle: tag, history };
             }
         }
         return sanitized;
@@ -94,7 +95,8 @@ function toggleModal() {
         editingDbList = Object.keys(db).map(id => ({
             id: String(id),
             name: sanitizeName(db[id]?.name, id),
-            tag: db[id]?.tag || db[id]?.handle || ''
+            tag: db[id]?.tag || db[id]?.handle || '',
+            history: Array.isArray(db[id]?.history) ? [...db[id].history] : []
         }));
         
         // Сортуємо за числовим ID
@@ -177,12 +179,19 @@ function renderDbTableRows() {
         const dismissed = isDismissed(item);
         const statusLabel = dismissed ? 'Звільнився' : 'Активний';
         const statusClass = dismissed ? 'dismissed' : 'active';
+        const historyCount = Array.isArray(item.history) ? item.history.length : 0;
+        const historyTooltip = historyCount > 0
+            ? `Історія записів (${historyCount}):\n` + item.history.map(h => `• ${h.name || 'Без імені'} (${h.tag || ''}) — ${h.status === 'dismissed' ? 'Звільнився' : 'Активний'} [${h.archivedAt || 'архів'}]`).join('\n')
+            : '';
 
         row.innerHTML = `
             <input type="text" class="row-id" placeholder="ID" value="${escapeHtml(item.id)}" title="Номер ID">
             <input type="text" class="row-name" placeholder="Ім'я" value="${escapeHtml(item.name)}" title="Ім'я оператора">
             <input type="text" class="row-handle" placeholder="@тег" value="${escapeHtml(item.tag)}" title="Telegram-тег">
-            <div class="status-col" style="display:flex; justify-content:center;"><span class="status-badge ${statusClass}">${statusLabel}</span></div>
+            <div class="status-col" style="display:flex; align-items:center; justify-content:center; gap:4px;">
+                <span class="status-badge ${statusClass}">${statusLabel}</span>
+                ${historyCount > 0 ? `<span style="font-size:11px; cursor:help; color:var(--tg-text-muted);" title="${escapeHtml(historyTooltip)}">📜${historyCount}</span>` : ''}
+            </div>
             <button type="button" class="btn-del" title="Видалити" onclick="deleteDbRow(${originalIndex})">✕</button>
         `;
         container.appendChild(row);
@@ -191,7 +200,7 @@ function renderDbTableRows() {
 
 function addNewDbRow() {
     syncEditingDbFromDom();
-    editingDbList.unshift({ id: '', name: '', tag: '' });
+    editingDbList.unshift({ id: '', name: '', tag: '', history: [] });
     renderDbTableRows();
     const firstInput = document.querySelector('.db-row input.row-id');
     if (firstInput) firstInput.focus();
@@ -248,10 +257,26 @@ function saveInteractiveDB() {
         }
 
         seenIds.add(cleanId);
+
+        // Фіксація історії при зміні або перевидачі ID іншому оператору
+        const oldOp = db[cleanId];
+        let history = Array.isArray(item.history) ? [...item.history] : (oldOp && Array.isArray(oldOp.history) ? [...oldOp.history] : []);
+
+        if (oldOp && (oldOp.name !== cleanName || oldOp.tag !== cleanTag)) {
+            const wasDismissed = isDismissed(oldOp);
+            history.push({
+                name: oldOp.name || '',
+                tag: oldOp.tag || oldOp.handle || '',
+                status: wasDismissed ? 'dismissed' : 'active',
+                archivedAt: new Date().toISOString().slice(0, 10)
+            });
+        }
+
         newDb[cleanId] = {
             name: cleanName,
             tag: cleanTag,
-            handle: cleanTag
+            handle: cleanTag,
+            history
         };
     }
 
@@ -491,10 +516,35 @@ function exportDbToExcel() {
     });
 
     const activeRows = allRows.filter(r => r["Статус"] === "Активний");
-    const dismissedRows = allRows.filter(r => r["Статус"] === "Звільнився");
+    
+    // Формуємо аркуш "Звільнені": поточні звільнені + історичні звільнені власники ID
+    const dismissedRows = [];
+    allRows.forEach(r => {
+        if (r["Статус"] === "Звільнився") {
+            dismissedRows.push({ ...r });
+        }
+    });
+
+    ids.forEach(id => {
+        const op = db[id];
+        if (op && Array.isArray(op.history)) {
+            op.history.forEach(hist => {
+                if (hist && (hist.status === 'dismissed' || isDismissed(hist))) {
+                    dismissedRows.push({
+                        "ID": Number(id) || id,
+                        "Ім'я": hist.name || '',
+                        "Telegram Handle": hist.tag || hist.handle || '',
+                        "Статус": "Звільнився" + (hist.archivedAt ? ` (${hist.archivedAt})` : ' (історія)')
+                    });
+                }
+            });
+        }
+    });
+
+    dismissedRows.sort((a, b) => (parseInt(a["ID"], 10) || 0) - (parseInt(b["ID"], 10) || 0));
 
     const wb = XLSX.utils.book_new();
-    const colWidths = [{ wch: 8 }, { wch: 24 }, { wch: 22 }, { wch: 14 }];
+    const colWidths = [{ wch: 8 }, { wch: 24 }, { wch: 22 }, { wch: 18 }];
 
     const wsAll = XLSX.utils.json_to_sheet(allRows);
     wsAll['!cols'] = colWidths;
@@ -593,7 +643,8 @@ window.addEventListener('DOMContentLoaded', async () => {
                         if (op && typeof op === 'object') {
                             const tag = op.handle || op.tag || '';
                             const name = sanitizeName(op.name, id);
-                            sanitized[id] = { name, tag, handle: tag };
+                            const history = Array.isArray(op.history) ? op.history : [];
+                            sanitized[id] = { name, tag, handle: tag, history };
                         }
                     }
                     if (Object.keys(sanitized).length > 0) {
