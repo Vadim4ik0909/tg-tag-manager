@@ -630,16 +630,26 @@ function processInput() {
             if (isOutage) cardClasses.push('is-outage');
             div.className = cardClasses.join(' ');
             div.dataset.outage = outageType;
-
-            let toggleBtnIcon = '⚡️';
-            if (outageType === 'no_net') toggleBtnIcon = '🌐';
-            else if (outageType === 'offline') toggleBtnIcon = '⏸';
+            div.dataset.opId = id;
 
             div.innerHTML = `
                 <div class="card-header">
                     <input type="checkbox" ${isChecked ? 'checked' : ''} onchange="this.closest('.card').classList.toggle('active'); updateTags()">
                     <span class="card-title"><strong>Оп ${escapeHtml(id)}</strong>${name ? ` <span class="card-name">— ${escapeHtml(name)}</span>` : ''}</span>
-                    <button type="button" class="btn-outage-toggle" onclick="toggleCardOutage(this, '${escapeHtml(id)}', event)" title="Змінити статус (Світло / Інтернет / Офлайн)">${toggleBtnIcon}</button>
+                    <div class="card-status-bar">
+                        <button type="button" class="btn-status-icon ${outageType === 'no_light' ? 'active no-light' : ''}" 
+                                data-type="no_light"
+                                onclick="toggleDirectOutage('${escapeHtml(id)}', 'no_light', event)" 
+                                title="Без світла (⚡️)">⚡️</button>
+                        <button type="button" class="btn-status-icon ${outageType === 'no_net' ? 'active no-net' : ''}" 
+                                data-type="no_net"
+                                onclick="toggleDirectOutage('${escapeHtml(id)}', 'no_net', event)" 
+                                title="Без інтернету (🌐)">🌐</button>
+                        <button type="button" class="btn-status-icon ${outageType === 'offline' ? 'active offline' : ''}" 
+                                data-type="offline"
+                                onclick="toggleDirectOutage('${escapeHtml(id)}', 'offline', event)" 
+                                title="Офлайн / Відсутній (⏸)">⏸</button>
+                    </div>
                 </div>
                 <div class="card-subtitle">${escapeHtml(tag)}</div>
                 ${badgesHtml ? `<div class="card-badges">${badgesHtml}</div>` : ''}
@@ -654,26 +664,16 @@ function processInput() {
     updateTags();
 }
 
-function toggleCardOutage(btn, id, event) {
+function toggleDirectOutage(id, statusType, event) {
     if (event) {
         event.preventDefault();
         event.stopPropagation();
     }
-    const card = btn.closest('.card');
+    const card = document.querySelector(`.card[data-op-id="${id}"]`) || (event ? event.target.closest('.card') : null);
     if (!card) return;
 
     const currentOutage = card.dataset.outage || 'none';
-    let nextOutage = 'none';
-
-    if (currentOutage === 'none') {
-        nextOutage = 'no_light';
-    } else if (currentOutage === 'no_light') {
-        nextOutage = 'no_net';
-    } else if (currentOutage === 'no_net') {
-        nextOutage = 'offline';
-    } else {
-        nextOutage = 'none';
-    }
+    const nextOutage = currentOutage === statusType ? 'none' : statusType;
 
     setCardOutageState(card, nextOutage);
 }
@@ -691,38 +691,35 @@ function setCardOutageState(card, outage) {
     const existingOutageBadge = badgesContainer.querySelector('.badge-outage');
     if (existingOutageBadge) existingOutageBadge.remove();
 
-    const toggleBtn = card.querySelector('.btn-outage-toggle');
+    const statusButtons = card.querySelectorAll('.btn-status-icon');
+    statusButtons.forEach(btn => {
+        btn.classList.remove('active', 'no-light', 'no-net', 'offline');
+    });
 
     if (outage === 'none') {
         card.classList.remove('is-outage');
         if (checkbox) checkbox.checked = true;
         card.classList.add('active');
-        if (toggleBtn) {
-            toggleBtn.innerText = '⚡️';
-            toggleBtn.title = 'Позначити статус: Без світла / Інтернету / Офлайн';
-        }
     } else {
         card.classList.add('is-outage');
         if (checkbox) checkbox.checked = false;
         card.classList.remove('active');
 
         let badgeHtml = '';
-        let btnIcon = '⚡️';
         if (outage === 'no_light') {
             badgeHtml = '<span class="badge-role badge-outage badge-no-light">⚡️ Без світла</span>';
-            btnIcon = '⚡️';
+            const btn = card.querySelector('.btn-status-icon[data-type="no_light"]');
+            if (btn) btn.classList.add('active', 'no-light');
         } else if (outage === 'no_net') {
             badgeHtml = '<span class="badge-role badge-outage badge-no-net">🌐 Без інтернету</span>';
-            btnIcon = '🌐';
+            const btn = card.querySelector('.btn-status-icon[data-type="no_net"]');
+            if (btn) btn.classList.add('active', 'no-net');
         } else if (outage === 'offline') {
             badgeHtml = '<span class="badge-role badge-outage badge-offline">⏸ Офлайн</span>';
-            btnIcon = '⏸';
+            const btn = card.querySelector('.btn-status-icon[data-type="offline"]');
+            if (btn) btn.classList.add('active', 'offline');
         }
         badgesContainer.insertAdjacentHTML('beforeend', badgeHtml);
-        if (toggleBtn) {
-            toggleBtn.innerText = btnIcon;
-            toggleBtn.title = `Поточний статус: ${outage}. Натисніть, щоб змінити.`;
-        }
     }
 
     updateTags();
@@ -992,6 +989,14 @@ window.addEventListener('DOMContentLoaded', async () => {
 });
 
 const APP_CHANGELOG = [
+    {
+        version: "1.4.4",
+        date: "2026-10-04",
+        changes: [
+            { category: "Added", text: "Мікро-тулбар із 3 прямими іконками статусів (⚡️ Світло / 🌐 Інтернет / ⏸ Офлайн) на кожній картці оператора." },
+            { category: "Added", text: "Пряме перемикання та скидання статусу в один клік із миттєвою синхронізацією розрахунку." }
+        ]
+    },
     {
         version: "1.4.3",
         date: "2026-10-04",
