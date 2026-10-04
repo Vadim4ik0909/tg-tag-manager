@@ -589,7 +589,6 @@ function processInput() {
 
             if (item.isLead) {
                 isChecked = false;
-                badgesHtml += `<span class="badge-role badge-lead">👑 Головний (без заявок)</span>`;
             }
 
             if (item.outage) {
@@ -642,7 +641,7 @@ function processInput() {
             div.innerHTML = `
                 <div class="card-header-row">
                     <input type="checkbox" ${isChecked ? 'checked' : ''} onchange="this.closest('.card').classList.toggle('active'); updateTags()">
-                    <span class="card-title"><strong>Оп ${escapeHtml(id)}</strong>${name ? ` <span class="card-name">— ${escapeHtml(name)}</span>` : ''}</span>
+                    <span class="card-title"><strong>Оп ${escapeHtml(id)}</strong>${name ? ` <span class="card-name">— ${escapeHtml(name)}</span>` : ''}${item.isLead ? ` <span class="lead-crown-icon" title="Головний бази">👑</span>` : ''}</span>
                 </div>
                 <div class="card-footer-row">
                     <div class="card-subtitle">${escapeHtml(tag)}</div>
@@ -1255,6 +1254,14 @@ window.addEventListener('DOMContentLoaded', async () => {
 });
 
 const APP_CHANGELOG = [
+    {
+        version: "1.4.10",
+        date: "2026-10-04",
+        changes: [
+            { category: "Added", text: "Корона Головного бази (👑) перенесена у заголовок картки безпосередньо поруч з іменем оператора." },
+            { category: "Fixed", text: "Видалено нижній бейдж «Головний (без заявок)» для оптимізації висоти та компактності карток." }
+        ]
+    },
     {
         version: "1.4.9",
         date: "2026-10-04",
