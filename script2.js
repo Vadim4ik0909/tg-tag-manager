@@ -702,29 +702,60 @@ function toggleBreakMenu(id, event) {
     const popover = document.createElement('div');
     popover.className = 'break-menu-popover';
     popover.innerHTML = `
-        <button type="button" class="btn-break-option" onclick="startOperatorBreak('${escapeHtml(id)}', 15, '15 хв', event)">☕️ 15 хв</button>
-        <button type="button" class="btn-break-option" onclick="startOperatorBreak('${escapeHtml(id)}', 30, '30 хв', event)">☕️ 30 хв</button>
-        <button type="button" class="btn-break-option" onclick="startOperatorBreak('${escapeHtml(id)}', 60, 'Обід', event)">🍔 1 год (Обід)</button>
+        <button type="button" class="btn-break-option" onclick="startBreak('${escapeHtml(id)}', 15 * 60, '15 хв', event)">☕️ 15 хв</button>
+        <button type="button" class="btn-break-option" onclick="startBreak('${escapeHtml(id)}', 30 * 60, '30 хв', event)">☕️ 30 хв</button>
+        <button type="button" class="btn-break-option" onclick="startBreak('${escapeHtml(id)}', 60 * 60, 'Обід', event)">🍔 1 год (Обід)</button>
+        <div class="break-custom-row" onclick="event.stopPropagation()">
+            <input type="number" id="customMin_${escapeHtml(id)}" placeholder="хв" min="0" max="180">
+            <span>:</span>
+            <input type="number" id="customSec_${escapeHtml(id)}" placeholder="сек" min="0" max="59">
+            <button type="button" class="btn-custom-start" onclick="startCustomBreak('${escapeHtml(id)}', event)" title="Запустити">▶</button>
+        </div>
     `;
 
     wrap.appendChild(popover);
 }
 
-function startOperatorBreak(id, durationMinutes, label, event) {
+function startCustomBreak(id, event) {
+    if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
+    const minInput = document.getElementById(`customMin_${id}`);
+    const secInput = document.getElementById(`customSec_${id}`);
+    const mins = parseInt(minInput ? minInput.value : 0, 10) || 0;
+    const secs = parseInt(secInput ? secInput.value : 0, 10) || 0;
+    const totalSeconds = mins * 60 + secs;
+    if (totalSeconds <= 0) return;
+
+    let label = 'Перерва';
+    if (mins > 0 && secs > 0) {
+        label = `${mins}хв ${secs}с`;
+    } else if (mins > 0) {
+        label = `${mins} хв`;
+    } else {
+        label = `${secs} с`;
+    }
+
+    startBreak(id, totalSeconds, label, event);
+}
+
+function startBreak(id, totalSeconds, label, event) {
     if (event) {
         event.preventDefault();
         event.stopPropagation();
     }
     document.querySelectorAll('.break-menu-popover').forEach(p => p.remove());
 
-    const totalMs = durationMinutes * 60 * 1000;
+    const totalMs = totalSeconds * 1000;
     const breaks = getBreaksState();
     breaks[id] = {
         startAt: Date.now(),
         totalMs: totalMs,
+        totalSeconds: totalSeconds,
         breakUntil: Date.now() + totalMs,
-        breakType: durationMinutes === 60 ? 'lunch' : `${durationMinutes}m`,
-        label: label
+        breakType: totalSeconds >= 3600 && String(label).includes('Обід') ? 'lunch' : 'break',
+        label: label || 'Перерва'
     };
     setBreaksState(breaks);
 
@@ -739,8 +770,9 @@ function startOperatorBreak(id, durationMinutes, label, event) {
     showToast(`✓ Оп ${id}: перерву (${label}) активовано`);
     updateTags();
 }
+const startOperatorBreak = startBreak;
 
-function cancelOperatorBreak(id, event) {
+function cancelBreak(id, event) {
     if (event) {
         event.preventDefault();
         event.stopPropagation();
@@ -763,6 +795,13 @@ function cancelOperatorBreak(id, event) {
 
     showToast(`✓ Оп ${id}: перерву завершено`);
     updateTags();
+}
+const cancelOperatorBreak = cancelBreak;
+
+function formatTimeRemaining(remainingSeconds) {
+    const mins = Math.floor(remainingSeconds / 60);
+    const secs = remainingSeconds % 60;
+    return `${mins}:${String(secs).padStart(2, '0')}`;
 }
 
 function checkActiveBreaks() {
@@ -788,14 +827,12 @@ function checkActiveBreaks() {
             }
         } else if (card) {
             const totalSec = Math.max(1, Math.ceil(diffMs / 1000));
-            const mins = Math.floor(totalSec / 60);
-            const secs = totalSec % 60;
-            const timeRemainingStr = `${mins}:${String(secs).padStart(2, '0')}`;
+            const timeRemainingStr = formatTimeRemaining(totalSec);
 
             const endDate = new Date(brk.breakUntil);
             const endTimeStr = `${String(endDate.getHours()).padStart(2, '0')}:${String(endDate.getMinutes()).padStart(2, '0')}`;
 
-            const totalMs = brk.totalMs || (brk.breakType === 'lunch' ? 3600000 : 900000);
+            const totalMs = brk.totalMs || (brk.totalSeconds ? brk.totalSeconds * 1000 : (brk.breakType === 'lunch' ? 3600000 : 900000));
             const fractionRemaining = Math.max(0, Math.min(1, diffMs / totalMs));
             const dashoffset = (34.56 * (1 - fractionRemaining)).toFixed(2);
 
@@ -819,7 +856,7 @@ function checkActiveBreaks() {
             if (badge) {
                 badge.innerHTML = badgeContent;
             } else {
-                badgesContainer.insertAdjacentHTML('beforeend', `<div class="break-countdown-badge" onclick="cancelOperatorBreak('${escapeHtml(id)}', event)" title="Клікніть, щоб завершити перерву">${badgeContent}</div>`);
+                badgesContainer.insertAdjacentHTML('beforeend', `<div class="break-countdown-badge" onclick="cancelBreak('${escapeHtml(id)}', event)" title="Клікніть, щоб завершити перерву">${badgeContent}</div>`);
             }
 
             const cb = card.querySelector('input[type="checkbox"]');
@@ -1194,6 +1231,15 @@ window.addEventListener('DOMContentLoaded', async () => {
 });
 
 const APP_CHANGELOG = [
+    {
+        version: "1.4.8",
+        date: "2026-10-04",
+        changes: [
+            { category: "Added", text: "Власні поля вводу тривалості перерви (хвилини + секунди) разом зі швидкими пресетами (15хв, 30хв, 1год)." },
+            { category: "Added", text: "Повний посекундний таймер та круговий анімований індикатор прогресу для довільних перерв." },
+            { category: "Fixed", text: "Абсолютне закріплення випадаючого меню перерви безпосередньо під іконкою виклику." }
+        ]
+    },
     {
         version: "1.4.7",
         date: "2026-10-04",

@@ -633,7 +633,7 @@
         }
         .break-menu-popover {
             position: absolute;
-            top: calc(100% + 4px);
+            top: calc(100% + 6px);
             right: 0;
             background: var(--tg-card);
             border: 1px solid var(--tg-border);
@@ -642,8 +642,49 @@
             display: flex;
             flex-direction: column;
             z-index: 120;
-            min-width: 130px;
+            width: 170px;
             overflow: hidden;
+        }
+        .break-custom-row {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 6px 8px;
+            background: rgba(15, 23, 33, 0.6);
+            border-top: 1px solid var(--tg-border);
+        }
+        .break-custom-row input {
+            background: var(--tg-input-bg);
+            border: 1px solid var(--tg-input-border);
+            color: var(--tg-text);
+            border-radius: 4px;
+            padding: 4px;
+            font-size: 11px;
+            text-align: center;
+            outline: none;
+            width: 45px;
+        }
+        .break-custom-row input:focus {
+            border-color: var(--tg-accent);
+        }
+        .break-custom-row span {
+            color: var(--tg-text-muted);
+            font-weight: bold;
+            font-size: 12px;
+        }
+        .btn-custom-start {
+            background: var(--tg-accent);
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            padding: 4px 8px;
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: bold;
+            transition: opacity 0.15s;
+        }
+        .btn-custom-start:hover {
+            opacity: 0.9;
         }
         .btn-break-option {
             background: transparent;
@@ -868,7 +909,7 @@
 <div id="toastNotification" class="toast">✓ Теги успішно скопійовано!</div>
 
 <div id="appVersionBadge" class="version-badge" onclick="toggleChangelogModal()" title="Історія оновлень">
-    <span class="badge-dot"></span> v1.4.7
+    <span class="badge-dot"></span> v1.4.8
 </div>
 
 <div class="container">
@@ -960,7 +1001,7 @@
         </div>
         <div class="modal-body" id="changelogContainer" style="max-height: 56vh;"></div>
         <div class="modal-footer">
-            <span style="font-size:13px; color:var(--tg-text-muted);">Поточна версія: v1.4.7</span>
+            <span style="font-size:13px; color:var(--tg-text-muted);">Поточна версія: v1.4.8</span>
             <div class="modal-footer-btns">
                 <button onclick="toggleChangelogModal()" class="btn-secondary">Закрити</button>
             </div>
