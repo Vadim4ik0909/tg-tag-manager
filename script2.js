@@ -485,9 +485,87 @@ function updateTags() {
 
     const resultArea = document.getElementById('tagResult');
     const counter = document.getElementById('opCounter');
+    const calcOpsInput = document.getElementById('calcOpsInput');
 
     if (resultArea) resultArea.value = tags.join(' ');
     if (counter) counter.innerText = `Вибрано: ${tags.length}`;
+    if (calcOpsInput) {
+        calcOpsInput.value = tags.length;
+        calculateLeadDistribution();
+    }
+}
+
+function calculateLeadDistribution() {
+    const leadsInput = document.getElementById('calcLeadsInput');
+    const opsInput = document.getElementById('calcOpsInput');
+    const resultInput = document.getElementById('calcResult');
+    if (!resultInput) return;
+
+    const leadsVal = leadsInput ? leadsInput.value.trim() : '';
+    const opsVal = opsInput ? opsInput.value.trim() : '';
+
+    if (!leadsVal || !opsVal) {
+        resultInput.value = '';
+        return;
+    }
+
+    const leads = parseFloat(leadsVal);
+    const ops = parseInt(opsVal, 10);
+
+    if (isNaN(leads) || isNaN(ops) || ops <= 0 || leads < 0) {
+        resultInput.value = '0';
+        return;
+    }
+
+    const perOp = leads / ops;
+    if (Number.isInteger(perOp)) {
+        resultInput.value = perOp.toString();
+    } else {
+        resultInput.value = Number(perOp.toFixed(1)).toString();
+    }
+}
+
+function copyCalcResult() {
+    const resInput = document.getElementById('calcResult');
+    if (!resInput || !resInput.value.trim()) {
+        showToast('⚠️ Немає розрахованого значення для копіювання');
+        return;
+    }
+
+    const val = resInput.value.trim();
+    const btn = document.getElementById('btnCopyCalcResult');
+
+    const handleSuccess = () => {
+        showToast(`✓ Скопійовано: ${val} на оператора`);
+        if (btn) {
+            const orig = btn.innerText;
+            btn.innerText = '✓';
+            btn.style.color = 'var(--tg-success)';
+            setTimeout(() => {
+                btn.innerText = orig;
+                btn.style.color = '';
+            }, 1500);
+        }
+    };
+
+    if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(val)
+            .then(handleSuccess)
+            .catch(() => fallbackCopyInput(resInput, handleSuccess));
+        return;
+    }
+    fallbackCopyInput(resInput, handleSuccess);
+}
+
+function fallbackCopyInput(inputElem, cb) {
+    inputElem.focus();
+    inputElem.select();
+    try {
+        document.execCommand('copy');
+        if (cb) cb();
+    } catch (err) {
+        showToast('❌ Помилка копіювання');
+    }
 }
 
 function exportDbToExcel() {
@@ -663,6 +741,14 @@ window.addEventListener('DOMContentLoaded', async () => {
 });
 
 const APP_CHANGELOG = [
+    {
+        version: "1.4.1",
+        date: "2026-10-04",
+        changes: [
+            { category: "Added", text: "Інтерактивний калькулятор розподілу заявок на активних операторів." },
+            { category: "Added", text: "Автоматична синхронізація кількості операторів та миттєве копіювання результату." }
+        ]
+    },
     {
         version: "1.4.0",
         date: "2026-10-01",
