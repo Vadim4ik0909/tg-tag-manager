@@ -633,24 +633,19 @@ function processInput() {
             div.dataset.opId = id;
             div.dataset.isLead = item.isLead ? 'true' : 'false';
 
+            let toggleBtnIcon = '⚡️';
+            let toggleBtnStyle = '';
+            if (outageType === 'no_net') { toggleBtnIcon = '🌐'; toggleBtnStyle = 'opacity:1;'; }
+            else if (outageType === 'offline') { toggleBtnIcon = '⏸'; toggleBtnStyle = 'opacity:1;'; }
+            else if (outageType === 'no_light') { toggleBtnIcon = '⚡️'; toggleBtnStyle = 'opacity:1;'; }
+
             div.innerHTML = `
                 <div class="card-header">
                     <input type="checkbox" ${isChecked ? 'checked' : ''} onchange="this.closest('.card').classList.toggle('active'); updateTags()">
                     <span class="card-title"><strong>Оп ${escapeHtml(id)}</strong>${name ? ` <span class="card-name">— ${escapeHtml(name)}</span>` : ''}</span>
-                    <button type="button" class="btn-lead-toggle ${item.isLead ? 'active' : ''}" onclick="toggleLeadOperator('${escapeHtml(id)}', event)" title="${item.isLead ? 'Зняти статус Головного бази' : 'Зробити Головним бази'}">👑</button>
-                    <div class="card-status-bar">
-                        <button type="button" class="btn-status-icon ${outageType === 'no_light' ? 'active no-light' : ''}" 
-                                data-type="no_light"
-                                onclick="toggleDirectOutage('${escapeHtml(id)}', 'no_light', event)" 
-                                title="Без світла (⚡️)">⚡️</button>
-                        <button type="button" class="btn-status-icon ${outageType === 'no_net' ? 'active no-net' : ''}" 
-                                data-type="no_net"
-                                onclick="toggleDirectOutage('${escapeHtml(id)}', 'no_net', event)" 
-                                title="Без інтернету (🌐)">🌐</button>
-                        <button type="button" class="btn-status-icon ${outageType === 'offline' ? 'active offline' : ''}" 
-                                data-type="offline"
-                                onclick="toggleDirectOutage('${escapeHtml(id)}', 'offline', event)" 
-                                title="Офлайн / Відсутній (⏸)">⏸</button>
+                    <div class="card-header-actions">
+                        <button type="button" class="btn-break-trigger" onclick="toggleBreakMenu('${escapeHtml(id)}', event)" title="Поставити перерву / обід">☕️</button>
+                        <button type="button" class="btn-outage-toggle" style="${toggleBtnStyle}" onclick="toggleCardOutage(this, '${escapeHtml(id)}', event)" title="Позначити статус: Без світла / Інтернету / Офлайн">${toggleBtnIcon}</button>
                     </div>
                 </div>
                 <div class="card-subtitle">${escapeHtml(tag)}</div>
@@ -663,60 +658,73 @@ function processInput() {
         grid.appendChild(div);
     });
 
+    checkActiveBreaks();
     updateTags();
 }
 
-function toggleLeadOperator(targetId, event) {
+// Перерви та Обід (Break / Lunch Timer System)
+function getBreaksState() {
+    try {
+        const raw = localStorage.getItem('tg_breaks_state');
+        return raw ? JSON.parse(raw) : {};
+    } catch (e) {
+        return {};
+    }
+}
+
+function setBreaksState(state) {
+    try {
+        localStorage.setItem('tg_breaks_state', JSON.stringify(state));
+    } catch (e) {}
+}
+
+function toggleBreakMenu(id, event) {
     if (event) {
         event.preventDefault();
         event.stopPropagation();
     }
-    const card = document.querySelector(`.card[data-op-id="${targetId}"]`);
+    const card = document.querySelector(`.card[data-op-id="${id}"]`);
     if (!card) return;
 
-    const isCurrentLead = card.dataset.isLead === 'true';
+    const existingPopover = card.querySelector('.break-menu-popover');
+    if (existingPopover) {
+        existingPopover.remove();
+        return;
+    }
 
-    if (isCurrentLead) {
-        card.dataset.isLead = 'false';
-        const leadBtn = card.querySelector('.btn-lead-toggle');
-        if (leadBtn) {
-            leadBtn.classList.remove('active');
-            leadBtn.title = 'Зробити Головним бази';
-        }
-        const leadBadge = card.querySelector('.badge-lead');
-        if (leadBadge) leadBadge.remove();
+    document.querySelectorAll('.break-menu-popover').forEach(p => p.remove());
 
-        if (card.dataset.outage === 'none' || !card.dataset.outage) {
-            const checkbox = card.querySelector('input[type="checkbox"]');
-            if (checkbox) checkbox.checked = true;
-            card.classList.add('active');
-        }
-    } else {
-        const allCards = document.querySelectorAll('#operatorGrid .card');
-        allCards.forEach(c => {
-            if (c.dataset.isLead === 'true') {
-                c.dataset.isLead = 'false';
-                const btn = c.querySelector('.btn-lead-toggle');
-                if (btn) {
-                    btn.classList.remove('active');
-                    btn.title = 'Зробити Головним бази';
-                }
-                const b = c.querySelector('.badge-lead');
-                if (b) b.remove();
-                if (c.dataset.outage === 'none' || !c.dataset.outage) {
-                    const cb = c.querySelector('input[type="checkbox"]');
-                    if (cb) cb.checked = true;
-                    c.classList.add('active');
-                }
-            }
-        });
+    const popover = document.createElement('div');
+    popover.className = 'break-menu-popover';
+    popover.innerHTML = `
+        <button type="button" class="btn-break-option" onclick="startOperatorBreak('${escapeHtml(id)}', 15, '15 хв', event)">☕️ 15 хв</button>
+        <button type="button" class="btn-break-option" onclick="startOperatorBreak('${escapeHtml(id)}', 30, '30 хв', event)">☕️ 30 хв</button>
+        <button type="button" class="btn-break-option" onclick="startOperatorBreak('${escapeHtml(id)}', 60, 'Обід', event)">🍔 1 год (Обід)</button>
+    `;
 
-        card.dataset.isLead = 'true';
-        const leadBtn = card.querySelector('.btn-lead-toggle');
-        if (leadBtn) {
-            leadBtn.classList.add('active');
-            leadBtn.title = 'Зняти статус Головного бази';
-        }
+    card.appendChild(popover);
+}
+
+function startOperatorBreak(id, durationMinutes, label, event) {
+    if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
+    document.querySelectorAll('.break-menu-popover').forEach(p => p.remove());
+
+    const breaks = getBreaksState();
+    breaks[id] = {
+        breakUntil: Date.now() + durationMinutes * 60 * 1000,
+        breakType: durationMinutes === 60 ? 'lunch' : `${durationMinutes}m`,
+        label: label
+    };
+    setBreaksState(breaks);
+
+    const card = document.querySelector(`.card[data-op-id="${id}"]`);
+    if (card) {
+        const cb = card.querySelector('input[type="checkbox"]');
+        if (cb) cb.checked = false;
+        card.classList.remove('active');
 
         let badgesContainer = card.querySelector('.card-badges');
         if (!badgesContainer) {
@@ -724,28 +732,123 @@ function toggleLeadOperator(targetId, event) {
             badgesContainer.className = 'card-badges';
             card.appendChild(badgesContainer);
         }
-        if (!badgesContainer.querySelector('.badge-lead')) {
-            badgesContainer.insertAdjacentHTML('afterbegin', '<span class="badge-role badge-lead">👑 Головний (без заявок)</span>');
-        }
+        const existingBreakBadge = badgesContainer.querySelector('.badge-break');
+        if (existingBreakBadge) existingBreakBadge.remove();
 
-        const checkbox = card.querySelector('input[type="checkbox"]');
-        if (checkbox) checkbox.checked = false;
-        card.classList.remove('active');
+        const icon = durationMinutes === 60 ? '🍔' : '☕️';
+        badgesContainer.insertAdjacentHTML('beforeend', `<span class="badge-role badge-break" onclick="cancelOperatorBreak('${escapeHtml(id)}', event)" title="Натисніть, щоб завершити перерву">${icon} ${escapeHtml(label)} (${durationMinutes} хв)</span>`);
     }
 
+    showToast(`✓ Оп ${id}: перерву (${label}) активовано`);
     updateTags();
 }
 
-function toggleDirectOutage(id, statusType, event) {
+function cancelOperatorBreak(id, event) {
     if (event) {
         event.preventDefault();
         event.stopPropagation();
     }
-    const card = document.querySelector(`.card[data-op-id="${id}"]`) || (event ? event.target.closest('.card') : null);
+    const breaks = getBreaksState();
+    delete breaks[id];
+    setBreaksState(breaks);
+
+    const card = document.querySelector(`.card[data-op-id="${id}"]`);
+    if (card) {
+        const breakBadge = card.querySelector('.badge-break');
+        if (breakBadge) breakBadge.remove();
+
+        if ((card.dataset.outage === 'none' || !card.dataset.outage) && card.dataset.isLead !== 'true') {
+            const cb = card.querySelector('input[type="checkbox"]');
+            if (cb) cb.checked = true;
+            card.classList.add('active');
+        }
+    }
+
+    showToast(`✓ Оп ${id}: перерву завершено`);
+    updateTags();
+}
+
+function checkActiveBreaks() {
+    const breaks = getBreaksState();
+    let changed = false;
+    const now = Date.now();
+
+    for (const [id, brk] of Object.entries(breaks)) {
+        const card = document.querySelector(`.card[data-op-id="${id}"]`);
+        if (now >= brk.breakUntil) {
+            delete breaks[id];
+            changed = true;
+            if (card) {
+                const badge = card.querySelector('.badge-break');
+                if (badge) badge.remove();
+                if ((card.dataset.outage === 'none' || !card.dataset.outage) && card.dataset.isLead !== 'true') {
+                    const cb = card.querySelector('input[type="checkbox"]');
+                    if (cb) cb.checked = true;
+                    card.classList.add('active');
+                }
+            }
+        } else if (card) {
+            const remainingMinutes = Math.max(1, Math.ceil((brk.breakUntil - now) / (60 * 1000)));
+            const icon = brk.breakType === 'lunch' ? '🍔' : '☕️';
+            const text = `${icon} ${brk.label} (${remainingMinutes} хв)`;
+
+            let badgesContainer = card.querySelector('.card-badges');
+            if (!badgesContainer) {
+                badgesContainer = document.createElement('div');
+                badgesContainer.className = 'card-badges';
+                card.appendChild(badgesContainer);
+            }
+
+            let badge = badgesContainer.querySelector('.badge-break');
+            if (badge) {
+                badge.innerText = text;
+            } else {
+                badgesContainer.insertAdjacentHTML('beforeend', `<span class="badge-role badge-break" onclick="cancelOperatorBreak('${escapeHtml(id)}', event)" title="Натисніть, щоб завершити перерву">${escapeHtml(text)}</span>`);
+            }
+
+            const cb = card.querySelector('input[type="checkbox"]');
+            if (cb && cb.checked) {
+                cb.checked = false;
+                card.classList.remove('active');
+            }
+        }
+    }
+
+    if (changed) {
+        setBreaksState(breaks);
+        updateTags();
+    }
+}
+
+setInterval(checkActiveBreaks, 15000);
+
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('.break-menu-popover') && !e.target.closest('.btn-break-trigger')) {
+        document.querySelectorAll('.break-menu-popover').forEach(p => p.remove());
+    }
+});
+
+// Форс-мажори (Outage Toggle)
+function toggleCardOutage(btn, id, event) {
+    if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
+    const card = btn.closest('.card') || document.querySelector(`.card[data-op-id="${id}"]`);
     if (!card) return;
 
     const currentOutage = card.dataset.outage || 'none';
-    const nextOutage = currentOutage === statusType ? 'none' : statusType;
+    let nextOutage = 'none';
+
+    if (currentOutage === 'none') {
+        nextOutage = 'no_light';
+    } else if (currentOutage === 'no_light') {
+        nextOutage = 'no_net';
+    } else if (currentOutage === 'no_net') {
+        nextOutage = 'offline';
+    } else {
+        nextOutage = 'none';
+    }
 
     setCardOutageState(card, nextOutage);
 }
@@ -763,35 +866,47 @@ function setCardOutageState(card, outage) {
     const existingOutageBadge = badgesContainer.querySelector('.badge-outage');
     if (existingOutageBadge) existingOutageBadge.remove();
 
-    const statusButtons = card.querySelectorAll('.btn-status-icon');
-    statusButtons.forEach(btn => {
-        btn.classList.remove('active', 'no-light', 'no-net', 'offline');
-    });
+    const toggleBtn = card.querySelector('.btn-outage-toggle');
 
     if (outage === 'none') {
         card.classList.remove('is-outage');
-        if (checkbox) checkbox.checked = true;
-        card.classList.add('active');
+        const id = card.dataset.opId;
+        const breaks = getBreaksState();
+        const hasBreak = breaks[id] && breaks[id].breakUntil > Date.now();
+        const isLead = card.dataset.isLead === 'true';
+
+        if (!hasBreak && !isLead) {
+            if (checkbox) checkbox.checked = true;
+            card.classList.add('active');
+        }
+        if (toggleBtn) {
+            toggleBtn.innerText = '⚡️';
+            toggleBtn.title = 'Позначити статус: Без світла / Інтернету / Офлайн';
+            toggleBtn.style.opacity = '';
+        }
     } else {
         card.classList.add('is-outage');
         if (checkbox) checkbox.checked = false;
         card.classList.remove('active');
 
         let badgeHtml = '';
+        let btnIcon = '⚡️';
         if (outage === 'no_light') {
             badgeHtml = '<span class="badge-role badge-outage badge-no-light">⚡️ Без світла</span>';
-            const btn = card.querySelector('.btn-status-icon[data-type="no_light"]');
-            if (btn) btn.classList.add('active', 'no-light');
+            btnIcon = '⚡️';
         } else if (outage === 'no_net') {
             badgeHtml = '<span class="badge-role badge-outage badge-no-net">🌐 Без інтернету</span>';
-            const btn = card.querySelector('.btn-status-icon[data-type="no_net"]');
-            if (btn) btn.classList.add('active', 'no-net');
+            btnIcon = '🌐';
         } else if (outage === 'offline') {
             badgeHtml = '<span class="badge-role badge-outage badge-offline">⏸ Офлайн</span>';
-            const btn = card.querySelector('.btn-status-icon[data-type="offline"]');
-            if (btn) btn.classList.add('active', 'offline');
+            btnIcon = '⏸';
         }
         badgesContainer.insertAdjacentHTML('beforeend', badgeHtml);
+        if (toggleBtn) {
+            toggleBtn.innerText = btnIcon;
+            toggleBtn.title = `Поточний статус: ${outage}. Натисніть, щоб змінити.`;
+            toggleBtn.style.opacity = '1';
+        }
     }
 
     updateTags();
@@ -1061,6 +1176,14 @@ window.addEventListener('DOMContentLoaded', async () => {
 });
 
 const APP_CHANGELOG = [
+    {
+        version: "1.4.6",
+        date: "2026-10-04",
+        changes: [
+            { category: "Added", text: "Таймери перерв та обіду (15 хв, 30 хв, 1 год) із фоновим зворотним відліком та автоповерненням." },
+            { category: "Fixed", text: "Оптимізація заголовка картки оператора: повернення до компактного циклічного перемикача форс-мажорів та максимальний простір для імен." }
+        ]
+    },
     {
         version: "1.4.5",
         date: "2026-10-04",

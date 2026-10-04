@@ -571,78 +571,84 @@
             color: #9ca3af;
             border: 1px solid rgba(107, 114, 128, 0.4);
         }
-        .btn-lead-toggle {
+        .card-header-actions {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-left: auto;
+            flex-shrink: 0;
+        }
+        .btn-outage-toggle {
             background: transparent;
             border: none;
             cursor: pointer;
-            font-size: 14px;
+            font-size: 13px;
             padding: 2px 4px;
-            opacity: 0.3;
-            transition: all 0.2s ease;
-            border-radius: 4px;
-            filter: grayscale(100%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            line-height: 1;
-            flex-shrink: 0;
-        }
-        .btn-lead-toggle:hover {
-            opacity: 0.9;
-            transform: scale(1.2);
-            filter: grayscale(0%);
-        }
-        .btn-lead-toggle.active {
-            opacity: 1;
-            filter: grayscale(0%);
-            transform: scale(1.1);
-            text-shadow: 0 0 8px rgba(245, 158, 11, 0.6);
-        }
-
-        .card-status-bar {
-            display: flex;
-            align-items: center;
-            gap: 3px;
-            margin-left: auto;
-            background: rgba(0, 0, 0, 0.25);
-            padding: 2px 4px;
-            border-radius: 6px;
-            border: 1px solid rgba(255, 255, 255, 0.05);
-        }
-        .btn-status-icon {
-            background: transparent;
-            border: 1px solid transparent;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 12px;
-            padding: 2px 4px;
-            line-height: 1;
-            opacity: 0.5;
-            transition: opacity 0.15s, background 0.15s, transform 0.15s, border-color 0.15s;
+            opacity: 0.45;
+            transition: opacity 0.15s, transform 0.15s;
             display: flex;
             align-items: center;
             justify-content: center;
         }
-        .btn-status-icon:hover {
+        .btn-outage-toggle:hover {
             opacity: 1;
             transform: scale(1.15);
-            background: rgba(255, 255, 255, 0.08);
         }
-        .btn-status-icon.active {
+        .btn-break-trigger {
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            font-size: 13px;
+            opacity: 0.45;
+            transition: opacity 0.15s, transform 0.15s;
+            padding: 2px 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .btn-break-trigger:hover {
             opacity: 1;
+            transform: scale(1.15);
+        }
+        .break-menu-popover {
+            position: absolute;
+            top: 38px;
+            right: 8px;
+            background: var(--tg-card);
+            border: 1px solid var(--tg-border);
+            border-radius: 8px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+            display: flex;
+            flex-direction: column;
+            z-index: 100;
+            overflow: hidden;
+            min-width: 125px;
+        }
+        .btn-break-option {
+            background: transparent;
+            border: none;
+            color: var(--tg-text);
+            padding: 8px 12px;
+            font-size: 12px;
+            cursor: pointer;
+            text-align: left;
+            white-space: nowrap;
+            transition: background 0.15s, color 0.15s;
+        }
+        .btn-break-option:hover {
+            background: var(--tg-card-hover);
+            color: var(--tg-accent);
+        }
+        .badge-break {
+            background: rgba(245, 158, 11, 0.18);
+            color: #f59e0b;
+            border: 1px solid rgba(245, 158, 11, 0.35);
+            cursor: pointer;
+            transition: transform 0.15s, background 0.15s;
+        }
+        .badge-break:hover {
             transform: scale(1.05);
-        }
-        .btn-status-icon.active.no-light {
-            background: rgba(234, 179, 8, 0.25);
-            border-color: rgba(234, 179, 8, 0.6);
-        }
-        .btn-status-icon.active.no-net {
-            background: rgba(168, 85, 247, 0.25);
-            border-color: rgba(168, 85, 247, 0.6);
-        }
-        .btn-status-icon.active.offline {
-            background: rgba(107, 114, 128, 0.35);
-            border-color: rgba(107, 114, 128, 0.7);
+            background: rgba(245, 158, 11, 0.28);
         }
         .card.is-outage {
             opacity: 0.65;
@@ -818,7 +824,7 @@
 <div id="toastNotification" class="toast">✓ Теги успішно скопійовано!</div>
 
 <div id="appVersionBadge" class="version-badge" onclick="toggleChangelogModal()" title="Історія оновлень">
-    <span class="badge-dot"></span> v1.4.5
+    <span class="badge-dot"></span> v1.4.6
 </div>
 
 <div class="container">
@@ -910,7 +916,7 @@
         </div>
         <div class="modal-body" id="changelogContainer" style="max-height: 56vh;"></div>
         <div class="modal-footer">
-            <span style="font-size:13px; color:var(--tg-text-muted);">Поточна версія: v1.4.5</span>
+            <span style="font-size:13px; color:var(--tg-text-muted);">Поточна версія: v1.4.6</span>
             <div class="modal-footer-btns">
                 <button onclick="toggleChangelogModal()" class="btn-secondary">Закрити</button>
             </div>
