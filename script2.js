@@ -631,11 +631,13 @@ function processInput() {
             div.className = cardClasses.join(' ');
             div.dataset.outage = outageType;
             div.dataset.opId = id;
+            div.dataset.isLead = item.isLead ? 'true' : 'false';
 
             div.innerHTML = `
                 <div class="card-header">
                     <input type="checkbox" ${isChecked ? 'checked' : ''} onchange="this.closest('.card').classList.toggle('active'); updateTags()">
                     <span class="card-title"><strong>Оп ${escapeHtml(id)}</strong>${name ? ` <span class="card-name">— ${escapeHtml(name)}</span>` : ''}</span>
+                    <button type="button" class="btn-lead-toggle ${item.isLead ? 'active' : ''}" onclick="toggleLeadOperator('${escapeHtml(id)}', event)" title="${item.isLead ? 'Зняти статус Головного бази' : 'Зробити Головним бази'}">👑</button>
                     <div class="card-status-bar">
                         <button type="button" class="btn-status-icon ${outageType === 'no_light' ? 'active no-light' : ''}" 
                                 data-type="no_light"
@@ -660,6 +662,76 @@ function processInput() {
 
         grid.appendChild(div);
     });
+
+    updateTags();
+}
+
+function toggleLeadOperator(targetId, event) {
+    if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
+    const card = document.querySelector(`.card[data-op-id="${targetId}"]`);
+    if (!card) return;
+
+    const isCurrentLead = card.dataset.isLead === 'true';
+
+    if (isCurrentLead) {
+        card.dataset.isLead = 'false';
+        const leadBtn = card.querySelector('.btn-lead-toggle');
+        if (leadBtn) {
+            leadBtn.classList.remove('active');
+            leadBtn.title = 'Зробити Головним бази';
+        }
+        const leadBadge = card.querySelector('.badge-lead');
+        if (leadBadge) leadBadge.remove();
+
+        if (card.dataset.outage === 'none' || !card.dataset.outage) {
+            const checkbox = card.querySelector('input[type="checkbox"]');
+            if (checkbox) checkbox.checked = true;
+            card.classList.add('active');
+        }
+    } else {
+        const allCards = document.querySelectorAll('#operatorGrid .card');
+        allCards.forEach(c => {
+            if (c.dataset.isLead === 'true') {
+                c.dataset.isLead = 'false';
+                const btn = c.querySelector('.btn-lead-toggle');
+                if (btn) {
+                    btn.classList.remove('active');
+                    btn.title = 'Зробити Головним бази';
+                }
+                const b = c.querySelector('.badge-lead');
+                if (b) b.remove();
+                if (c.dataset.outage === 'none' || !c.dataset.outage) {
+                    const cb = c.querySelector('input[type="checkbox"]');
+                    if (cb) cb.checked = true;
+                    c.classList.add('active');
+                }
+            }
+        });
+
+        card.dataset.isLead = 'true';
+        const leadBtn = card.querySelector('.btn-lead-toggle');
+        if (leadBtn) {
+            leadBtn.classList.add('active');
+            leadBtn.title = 'Зняти статус Головного бази';
+        }
+
+        let badgesContainer = card.querySelector('.card-badges');
+        if (!badgesContainer) {
+            badgesContainer = document.createElement('div');
+            badgesContainer.className = 'card-badges';
+            card.appendChild(badgesContainer);
+        }
+        if (!badgesContainer.querySelector('.badge-lead')) {
+            badgesContainer.insertAdjacentHTML('afterbegin', '<span class="badge-role badge-lead">👑 Головний (без заявок)</span>');
+        }
+
+        const checkbox = card.querySelector('input[type="checkbox"]');
+        if (checkbox) checkbox.checked = false;
+        card.classList.remove('active');
+    }
 
     updateTags();
 }
@@ -989,6 +1061,14 @@ window.addEventListener('DOMContentLoaded', async () => {
 });
 
 const APP_CHANGELOG = [
+    {
+        version: "1.4.5",
+        date: "2026-10-04",
+        changes: [
+            { category: "Added", text: "Інтерактивна кнопка-корона (👑) на кожній картці оператора для швидкого призначення Головного бази." },
+            { category: "Added", text: "Автоматичне правило єдиного активного Головного бази та виключення з розподілу заявок." }
+        ]
+    },
     {
         version: "1.4.4",
         date: "2026-10-04",

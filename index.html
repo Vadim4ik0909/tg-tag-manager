@@ -571,6 +571,34 @@
             color: #9ca3af;
             border: 1px solid rgba(107, 114, 128, 0.4);
         }
+        .btn-lead-toggle {
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            padding: 2px 4px;
+            opacity: 0.3;
+            transition: all 0.2s ease;
+            border-radius: 4px;
+            filter: grayscale(100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
+            flex-shrink: 0;
+        }
+        .btn-lead-toggle:hover {
+            opacity: 0.9;
+            transform: scale(1.2);
+            filter: grayscale(0%);
+        }
+        .btn-lead-toggle.active {
+            opacity: 1;
+            filter: grayscale(0%);
+            transform: scale(1.1);
+            text-shadow: 0 0 8px rgba(245, 158, 11, 0.6);
+        }
+
         .card-status-bar {
             display: flex;
             align-items: center;
@@ -790,7 +818,7 @@
 <div id="toastNotification" class="toast">✓ Теги успішно скопійовано!</div>
 
 <div id="appVersionBadge" class="version-badge" onclick="toggleChangelogModal()" title="Історія оновлень">
-    <span class="badge-dot"></span> v1.4.4
+    <span class="badge-dot"></span> v1.4.5
 </div>
 
 <div class="container">
@@ -882,7 +910,7 @@
         </div>
         <div class="modal-body" id="changelogContainer" style="max-height: 56vh;"></div>
         <div class="modal-footer">
-            <span style="font-size:13px; color:var(--tg-text-muted);">Поточна версія: v1.4.4</span>
+            <span style="font-size:13px; color:var(--tg-text-muted);">Поточна версія: v1.4.5</span>
             <div class="modal-footer-btns">
                 <button onclick="toggleChangelogModal()" class="btn-secondary">Закрити</button>
             </div>
