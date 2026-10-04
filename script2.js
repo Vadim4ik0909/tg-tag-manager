@@ -200,10 +200,56 @@ function renderDbTableRows() {
 
 function addNewDbRow() {
     syncEditingDbFromDom();
-    editingDbList.unshift({ id: '', name: '', tag: '', history: [] });
+
+    let maxId = 0;
+    editingDbList.forEach(item => {
+        const num = parseInt(item.id, 10);
+        if (!isNaN(num) && num > maxId) {
+            maxId = num;
+        }
+    });
+    const nextId = maxId > 0 ? String(maxId + 1) : '';
+
+    const newRecord = {
+        id: nextId,
+        name: '',
+        tag: '',
+        history: []
+    };
+
+    if (dbStatusFilter === 'dismissed') {
+        dbStatusFilter = 'all';
+        const filterGroup = document.querySelector('#dbModal .status-filter-group');
+        if (filterGroup) {
+            filterGroup.querySelectorAll('.btn-filter').forEach(b => b.classList.remove('active'));
+            const allBtn = filterGroup.querySelector('.btn-filter');
+            if (allBtn) allBtn.classList.add('active');
+        }
+    }
+    const searchInput = document.getElementById('dbSearch');
+    if (searchInput && searchInput.value.trim() !== '') {
+        searchInput.value = '';
+    }
+
+    editingDbList.push(newRecord);
     renderDbTableRows();
-    const firstInput = document.querySelector('.db-row input.row-id');
-    if (firstInput) firstInput.focus();
+
+    const modalBody = document.querySelector('#dbModal .modal-body') || document.getElementById('dbTableContainer');
+    if (modalBody) {
+        modalBody.scrollTo({ top: modalBody.scrollHeight, behavior: 'smooth' });
+    }
+
+    setTimeout(() => {
+        const rows = document.querySelectorAll('#dbTableContainer .db-row');
+        if (rows.length > 0) {
+            const lastRow = rows[rows.length - 1];
+            const targetInput = nextId ? (lastRow.querySelector('.row-name') || lastRow.querySelector('.row-id')) : lastRow.querySelector('.row-id');
+            if (targetInput) {
+                targetInput.focus();
+                targetInput.select?.();
+            }
+        }
+    }, 60);
 }
 
 function deleteDbRow(index) {
@@ -1254,6 +1300,14 @@ window.addEventListener('DOMContentLoaded', async () => {
 });
 
 const APP_CHANGELOG = [
+    {
+        version: "1.4.12",
+        date: "2026-10-04",
+        changes: [
+            { category: "Fixed", text: "Створення чистого порожнього рядка оператора при натисканні «+ Додати» без дублювання попередніх записів." },
+            { category: "Added", text: "Плавний авто-скрол до низу списку та автоматичний фокус на новоствореному полі вводу." }
+        ]
+    },
     {
         version: "1.4.11",
         date: "2026-10-04",
