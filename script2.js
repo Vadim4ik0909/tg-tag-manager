@@ -649,7 +649,7 @@ function processInput() {
                     <div class="card-footer-actions">
                         <button type="button" class="btn-outage-toggle" style="${toggleBtnStyle}" onclick="toggleCardOutage(this, '${escapeHtml(id)}', event)" title="Позначити статус: Без світла / Інтернету / Офлайн">${toggleBtnIcon}</button>
                         <div class="break-trigger-wrap">
-                            <button type="button" class="btn-break-trigger" onclick="toggleBreakMenu('${escapeHtml(id)}', event)" title="Поставити перерву / обід">☕️</button>
+                            <button type="button" class="btn-break-trigger" ${isOutage ? 'disabled' : ''} onclick="toggleBreakMenu('${escapeHtml(id)}', event)" title="${isOutage ? 'Перерва недоступна під час форс-мажору' : 'Поставити перерву / обід'}">☕️</button>
                         </div>
                     </div>
                 </div>
@@ -688,7 +688,7 @@ function toggleBreakMenu(id, event) {
         event.stopPropagation();
     }
     const card = document.querySelector(`.card[data-op-id="${id}"]`);
-    if (!card) return;
+    if (!card || card.classList.contains('is-outage') || (card.dataset.outage && card.dataset.outage !== 'none')) return;
 
     const wrap = card.querySelector('.break-trigger-wrap') || card;
     const existingPopover = wrap.querySelector('.break-menu-popover');
@@ -745,6 +745,9 @@ function startBreak(id, totalSeconds, label, event) {
         event.preventDefault();
         event.stopPropagation();
     }
+    const card = document.querySelector(`.card[data-op-id="${id}"]`);
+    if (card && (card.classList.contains('is-outage') || (card.dataset.outage && card.dataset.outage !== 'none'))) return;
+
     document.querySelectorAll('.break-menu-popover').forEach(p => p.remove());
 
     const totalMs = totalSeconds * 1000;
@@ -759,7 +762,6 @@ function startBreak(id, totalSeconds, label, event) {
     };
     setBreaksState(breaks);
 
-    const card = document.querySelector(`.card[data-op-id="${id}"]`);
     if (card) {
         const cb = card.querySelector('input[type="checkbox"]');
         if (cb) cb.checked = false;
@@ -939,10 +941,32 @@ function setCardOutageState(card, outage) {
             toggleBtn.title = 'Позначити статус: Без світла / Інтернету / Офлайн';
             toggleBtn.style.opacity = '';
         }
+        const breakBtn = card.querySelector('.btn-break-trigger');
+        if (breakBtn) {
+            breakBtn.disabled = false;
+            breakBtn.title = 'Поставити перерву / обід';
+        }
     } else {
         card.classList.add('is-outage');
         if (checkbox) checkbox.checked = false;
         card.classList.remove('active');
+
+        const id = card.dataset.opId;
+        const breaks = getBreaksState();
+        if (breaks[id]) {
+            delete breaks[id];
+            setBreaksState(breaks);
+            const breakBadge = card.querySelector('.break-countdown-badge');
+            if (breakBadge) breakBadge.remove();
+        }
+
+        const breakBtn = card.querySelector('.btn-break-trigger');
+        if (breakBtn) {
+            breakBtn.disabled = true;
+            breakBtn.title = 'Перерва недоступна під час форс-мажору';
+        }
+        const existingPopover = card.querySelector('.break-menu-popover');
+        if (existingPopover) existingPopover.remove();
 
         let badgeHtml = '';
         let btnIcon = '⚡️';
@@ -1231,6 +1255,15 @@ window.addEventListener('DOMContentLoaded', async () => {
 });
 
 const APP_CHANGELOG = [
+    {
+        version: "1.4.9",
+        date: "2026-10-04",
+        changes: [
+            { category: "Fixed", text: "Приховано стрілки-лічильники (spin-arrows) для полів вводу хвилин та секунд у меню перерви." },
+            { category: "Fixed", text: "Автоматичне блокування кнопки перерви та скидання активних таймерів під час форс-мажорів (⚡️ / 🌐 / ⏸)." },
+            { category: "Fixed", text: "Вирівнювання Telegram-юзернейму по лівій напрямній картки (padding-left: 0)." }
+        ]
+    },
     {
         version: "1.4.8",
         date: "2026-10-04",

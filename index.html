@@ -232,7 +232,7 @@
             align-items: center;
             min-width: 0;
             gap: 8px;
-            padding-left: 22px;
+            padding-left: 0;
         }
         .card-subtitle {
             color: var(--tg-text-muted);
@@ -664,6 +664,15 @@
             outline: none;
             width: 45px;
         }
+        .break-custom-row input[type="number"]::-webkit-outer-spin-button,
+        .break-custom-row input[type="number"]::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        .break-custom-row input[type="number"] {
+            -moz-appearance: textfield;
+            appearance: textfield;
+        }
         .break-custom-row input:focus {
             border-color: var(--tg-accent);
         }
@@ -685,6 +694,12 @@
         }
         .btn-custom-start:hover {
             opacity: 0.9;
+        }
+        .btn-break-trigger:disabled,
+        .card.is-outage .btn-break-trigger {
+            opacity: 0.2;
+            pointer-events: none;
+            cursor: not-allowed;
         }
         .btn-break-option {
             background: transparent;
@@ -909,7 +924,7 @@
 <div id="toastNotification" class="toast">✓ Теги успішно скопійовано!</div>
 
 <div id="appVersionBadge" class="version-badge" onclick="toggleChangelogModal()" title="Історія оновлень">
-    <span class="badge-dot"></span> v1.4.8
+    <span class="badge-dot"></span> v1.4.9
 </div>
 
 <div class="container">
@@ -1001,7 +1016,7 @@
         </div>
         <div class="modal-body" id="changelogContainer" style="max-height: 56vh;"></div>
         <div class="modal-footer">
-            <span style="font-size:13px; color:var(--tg-text-muted);">Поточна версія: v1.4.8</span>
+            <span style="font-size:13px; color:var(--tg-text-muted);">Поточна версія: v1.4.9</span>
             <div class="modal-footer-btns">
                 <button onclick="toggleChangelogModal()" class="btn-secondary">Закрити</button>
             </div>
