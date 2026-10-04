@@ -434,6 +434,7 @@ function parseOperatorInputTokens(input) {
     if (!input || typeof input !== 'string') return [];
 
     const processedRanges = [];
+    const checkOverlap = (start, end) => processedRanges.some(r => (start >= r.start && start < r.end) || (end > r.start && end <= r.end));
 
     // 1. Shift pattern: (32до19), 32(до19), 32 до 19, 32 (до 13:00), (32 до 19:00), 32(до 15)
     const shiftRegex = /(?:(\()?\s*(\d+)\s*(?:\(|\s*)\s*до\s*(\d{1,2})(?::(\d{2}))?\s*\)?\)?)/gi;
@@ -451,13 +452,60 @@ function parseOperatorInputTokens(input) {
         });
     }
 
-    // 2. Lead pattern: 23(г), 23 (г), 23(g), 23 (g), (23г), (23 г), 23г, 23g
+    // 2. Outage: No Light (47(б/с), 47(без світла), 47 (б/с), 47(світло), 47б/с, 47 (б.с))
+    const noLightRegex = /(?:(\()?\s*(\d+)\s*(?:\(|\s*)\s*(?:б[\/\.]?с|без\s*світла|світло)\s*\)?\)?)/gi;
+    while ((match = noLightRegex.exec(input)) !== null) {
+        const start = match.index;
+        const end = noLightRegex.lastIndex;
+        if (!checkOverlap(start, end)) {
+            const id = match[2];
+            processedRanges.push({
+                start,
+                end,
+                id,
+                outage: 'no_light'
+            });
+        }
+    }
+
+    // 3. Outage: No Net (105(б/і), 105(без нету), 105(нет), 105(інет), 105(інтернет), 105(интернет), 105(б/и), 105 (б/і))
+    const noNetRegex = /(?:(\()?\s*(\d+)\s*(?:\(|\s*)\s*(?:б[\/\.]?[іи]|без\s*(?:нету|інету|інтернету|интернета)|нет|інет|инет|інтернет|интернет)\s*\)?\)?)/gi;
+    while ((match = noNetRegex.exec(input)) !== null) {
+        const start = match.index;
+        const end = noNetRegex.lastIndex;
+        if (!checkOverlap(start, end)) {
+            const id = match[2];
+            processedRanges.push({
+                start,
+                end,
+                id,
+                outage: 'no_net'
+            });
+        }
+    }
+
+    // 4. Outage: Offline / Away (73(офлайн), 73(off), 73(немає), 73(offline), 73(оффлайн), 73(нема))
+    const offlineRegex = /(?:(\()?\s*(\d+)\s*(?:\(|\s*)\s*(?:офлайн|оффлайн|offline|off|немає|нема)\s*\)?\)?)/gi;
+    while ((match = offlineRegex.exec(input)) !== null) {
+        const start = match.index;
+        const end = offlineRegex.lastIndex;
+        if (!checkOverlap(start, end)) {
+            const id = match[2];
+            processedRanges.push({
+                start,
+                end,
+                id,
+                outage: 'offline'
+            });
+        }
+    }
+
+    // 5. Lead pattern: 23(г), 23 (г), 23(g), 23 (g), (23г), (23 г), 23г, 23g
     const leadRegex = /(?:(\()?\s*(\d+)\s*(?:\(|\s*)\s*([гgГG])\s*\)?\)?)/gi;
     while ((match = leadRegex.exec(input)) !== null) {
         const start = match.index;
         const end = leadRegex.lastIndex;
-        const overlaps = processedRanges.some(r => (start >= r.start && start < r.end) || (end > r.start && end <= r.end));
-        if (!overlaps) {
+        if (!checkOverlap(start, end)) {
             const id = match[2];
             processedRanges.push({
                 start,
@@ -468,13 +516,12 @@ function parseOperatorInputTokens(input) {
         }
     }
 
-    // 3. Plain ID pattern: match any remaining digits
+    // 6. Plain ID pattern: match any remaining digits
     const digitRegex = /\d+/g;
     while ((match = digitRegex.exec(input)) !== null) {
         const start = match.index;
         const end = digitRegex.lastIndex;
-        const overlaps = processedRanges.some(r => (start >= r.start && start < r.end) || (end > r.start && end <= r.end));
-        if (!overlaps) {
+        if (!checkOverlap(start, end)) {
             const id = match[0];
             processedRanges.push({
                 start,
@@ -496,6 +543,7 @@ function parseOperatorInputTokens(input) {
             result.push({
                 id: item.id,
                 isLead: Boolean(item.isLead),
+                outage: item.outage || null,
                 shiftEndHour: item.shiftEndHour !== undefined ? item.shiftEndHour : null,
                 shiftEndMin: item.shiftEndMin !== undefined ? item.shiftEndMin : 0
             });
@@ -536,10 +584,24 @@ function processInput() {
 
             let badgesHtml = '';
             let isChecked = true;
+            let isOutage = false;
+            let outageType = item.outage || 'none';
 
             if (item.isLead) {
                 isChecked = false;
                 badgesHtml += `<span class="badge-role badge-lead">👑 Головний (без заявок)</span>`;
+            }
+
+            if (item.outage) {
+                isChecked = false;
+                isOutage = true;
+                if (item.outage === 'no_light') {
+                    badgesHtml += `<span class="badge-role badge-outage badge-no-light">⚡️ Без світла</span>`;
+                } else if (item.outage === 'no_net') {
+                    badgesHtml += `<span class="badge-role badge-outage badge-no-net">🌐 Без інтернету</span>`;
+                } else if (item.outage === 'offline') {
+                    badgesHtml += `<span class="badge-role badge-outage badge-offline">⏸ Офлайн</span>`;
+                }
             }
 
             if (item.shiftEndHour !== null) {
@@ -563,11 +625,21 @@ function processInput() {
                 }
             }
 
-            div.className = isChecked ? 'card active' : 'card';
+            let cardClasses = ['card'];
+            if (isChecked) cardClasses.push('active');
+            if (isOutage) cardClasses.push('is-outage');
+            div.className = cardClasses.join(' ');
+            div.dataset.outage = outageType;
+
+            let toggleBtnIcon = '⚡️';
+            if (outageType === 'no_net') toggleBtnIcon = '🌐';
+            else if (outageType === 'offline') toggleBtnIcon = '⏸';
+
             div.innerHTML = `
                 <div class="card-header">
                     <input type="checkbox" ${isChecked ? 'checked' : ''} onchange="this.closest('.card').classList.toggle('active'); updateTags()">
                     <span class="card-title"><strong>Оп ${escapeHtml(id)}</strong>${name ? ` <span class="card-name">— ${escapeHtml(name)}</span>` : ''}</span>
+                    <button type="button" class="btn-outage-toggle" onclick="toggleCardOutage(this, '${escapeHtml(id)}', event)" title="Змінити статус (Світло / Інтернет / Офлайн)">${toggleBtnIcon}</button>
                 </div>
                 <div class="card-subtitle">${escapeHtml(tag)}</div>
                 ${badgesHtml ? `<div class="card-badges">${badgesHtml}</div>` : ''}
@@ -578,6 +650,80 @@ function processInput() {
 
         grid.appendChild(div);
     });
+
+    updateTags();
+}
+
+function toggleCardOutage(btn, id, event) {
+    if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
+    const card = btn.closest('.card');
+    if (!card) return;
+
+    const currentOutage = card.dataset.outage || 'none';
+    let nextOutage = 'none';
+
+    if (currentOutage === 'none') {
+        nextOutage = 'no_light';
+    } else if (currentOutage === 'no_light') {
+        nextOutage = 'no_net';
+    } else if (currentOutage === 'no_net') {
+        nextOutage = 'offline';
+    } else {
+        nextOutage = 'none';
+    }
+
+    setCardOutageState(card, nextOutage);
+}
+
+function setCardOutageState(card, outage) {
+    card.dataset.outage = outage;
+    const checkbox = card.querySelector('input[type="checkbox"]');
+    let badgesContainer = card.querySelector('.card-badges');
+    if (!badgesContainer) {
+        badgesContainer = document.createElement('div');
+        badgesContainer.className = 'card-badges';
+        card.appendChild(badgesContainer);
+    }
+
+    const existingOutageBadge = badgesContainer.querySelector('.badge-outage');
+    if (existingOutageBadge) existingOutageBadge.remove();
+
+    const toggleBtn = card.querySelector('.btn-outage-toggle');
+
+    if (outage === 'none') {
+        card.classList.remove('is-outage');
+        if (checkbox) checkbox.checked = true;
+        card.classList.add('active');
+        if (toggleBtn) {
+            toggleBtn.innerText = '⚡️';
+            toggleBtn.title = 'Позначити статус: Без світла / Інтернету / Офлайн';
+        }
+    } else {
+        card.classList.add('is-outage');
+        if (checkbox) checkbox.checked = false;
+        card.classList.remove('active');
+
+        let badgeHtml = '';
+        let btnIcon = '⚡️';
+        if (outage === 'no_light') {
+            badgeHtml = '<span class="badge-role badge-outage badge-no-light">⚡️ Без світла</span>';
+            btnIcon = '⚡️';
+        } else if (outage === 'no_net') {
+            badgeHtml = '<span class="badge-role badge-outage badge-no-net">🌐 Без інтернету</span>';
+            btnIcon = '🌐';
+        } else if (outage === 'offline') {
+            badgeHtml = '<span class="badge-role badge-outage badge-offline">⏸ Офлайн</span>';
+            btnIcon = '⏸';
+        }
+        badgesContainer.insertAdjacentHTML('beforeend', badgeHtml);
+        if (toggleBtn) {
+            toggleBtn.innerText = btnIcon;
+            toggleBtn.title = `Поточний статус: ${outage}. Натисніть, щоб змінити.`;
+        }
+    }
 
     updateTags();
 }
@@ -846,6 +992,15 @@ window.addEventListener('DOMContentLoaded', async () => {
 });
 
 const APP_CHANGELOG = [
+    {
+        version: "1.4.3",
+        date: "2026-10-04",
+        changes: [
+            { category: "Added", text: "Підтримка статусів форс-мажорів операторів: «Без світла» ⚡️, «Без інтернету» 🌐, «Офлайн» ⏸." },
+            { category: "Added", text: "Автоматичний парсинг префіксів (б/с, без світла, б/і, без нету, офлайн, off тощо) та виключення з розрахунку." },
+            { category: "Added", text: "Інтерактивний перемикач статусу на кожній картці оператора в 1 клік." }
+        ]
+    },
     {
         version: "1.4.2",
         date: "2026-10-04",
