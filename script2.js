@@ -1255,6 +1255,13 @@ window.addEventListener('DOMContentLoaded', async () => {
 
 const APP_CHANGELOG = [
     {
+        version: "1.4.11",
+        date: "2026-10-04",
+        changes: [
+            { category: "Fixed", text: "Ідеальне вертикальне центрування іконки корони Головного бази (👑) по горизонтальній осі з чекбоксом та ім'ям." }
+        ]
+    },
+    {
         version: "1.4.10",
         date: "2026-10-04",
         changes: [
