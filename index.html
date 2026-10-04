@@ -517,6 +517,49 @@
         .changelog-tag.fixed { background: rgba(46, 166, 255, 0.15); color: var(--tg-accent); border: 1px solid rgba(46, 166, 255, 0.3); }
         .changelog-tag.security { background: rgba(229, 57, 53, 0.15); color: var(--tg-warn); border: 1px solid rgba(229, 57, 53, 0.3); }
 
+        /* Operator Role & Shift Badges */
+        .card-badges {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            margin-top: 4px;
+        }
+        .badge-role {
+            display: inline-flex;
+            align-items: center;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 2px 6px;
+            border-radius: 4px;
+            line-height: 1.4;
+        }
+        .badge-lead {
+            background: rgba(245, 158, 11, 0.15);
+            color: #f59e0b;
+            border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+        .badge-expired {
+            background: rgba(239, 68, 68, 0.15);
+            color: var(--tg-warn);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+        .badge-warning {
+            background: rgba(245, 158, 11, 0.2);
+            color: #f59e0b;
+            border: 1px solid rgba(245, 158, 11, 0.4);
+            animation: pulseAttention 2s infinite;
+        }
+        .badge-info {
+            background: rgba(46, 166, 255, 0.15);
+            color: var(--tg-accent);
+            border: 1px solid rgba(46, 166, 255, 0.3);
+        }
+
+        @keyframes pulseAttention {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.85; transform: scale(0.98); }
+        }
+
         /* Lead Distribution Calculator */
         .calc-distribution-bar {
             display: flex;
@@ -681,7 +724,7 @@
 <div id="toastNotification" class="toast">✓ Теги успішно скопійовано!</div>
 
 <div id="appVersionBadge" class="version-badge" onclick="toggleChangelogModal()" title="Історія оновлень">
-    <span class="badge-dot"></span> v1.4.1
+    <span class="badge-dot"></span> v1.4.2
 </div>
 
 <div class="container">
@@ -773,7 +816,7 @@
         </div>
         <div class="modal-body" id="changelogContainer" style="max-height: 56vh;"></div>
         <div class="modal-footer">
-            <span style="font-size:13px; color:var(--tg-text-muted);">Поточна версія: v1.4.1</span>
+            <span style="font-size:13px; color:var(--tg-text-muted);">Поточна версія: v1.4.2</span>
             <div class="modal-footer-btns">
                 <button onclick="toggleChangelogModal()" class="btn-secondary">Закрити</button>
             </div>

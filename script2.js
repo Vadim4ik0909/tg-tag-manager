@@ -430,6 +430,81 @@ function handleFileImport(event) {
     }
 }
 
+function parseOperatorInputTokens(input) {
+    if (!input || typeof input !== 'string') return [];
+
+    const processedRanges = [];
+
+    // 1. Shift pattern: (32до19), 32(до19), 32 до 19, 32 (до 13:00), (32 до 19:00), 32(до 15)
+    const shiftRegex = /(?:(\()?\s*(\d+)\s*(?:\(|\s*)\s*до\s*(\d{1,2})(?::(\d{2}))?\s*\)?\)?)/gi;
+    let match;
+    while ((match = shiftRegex.exec(input)) !== null) {
+        const id = match[2];
+        const hour = parseInt(match[3], 10);
+        const min = match[4] ? parseInt(match[4], 10) : 0;
+        processedRanges.push({
+            start: match.index,
+            end: shiftRegex.lastIndex,
+            id,
+            shiftEndHour: hour,
+            shiftEndMin: min
+        });
+    }
+
+    // 2. Lead pattern: 23(г), 23 (г), 23(g), 23 (g), (23г), (23 г), 23г, 23g
+    const leadRegex = /(?:(\()?\s*(\d+)\s*(?:\(|\s*)\s*([гgГG])\s*\)?\)?)/gi;
+    while ((match = leadRegex.exec(input)) !== null) {
+        const start = match.index;
+        const end = leadRegex.lastIndex;
+        const overlaps = processedRanges.some(r => (start >= r.start && start < r.end) || (end > r.start && end <= r.end));
+        if (!overlaps) {
+            const id = match[2];
+            processedRanges.push({
+                start,
+                end,
+                id,
+                isLead: true
+            });
+        }
+    }
+
+    // 3. Plain ID pattern: match any remaining digits
+    const digitRegex = /\d+/g;
+    while ((match = digitRegex.exec(input)) !== null) {
+        const start = match.index;
+        const end = digitRegex.lastIndex;
+        const overlaps = processedRanges.some(r => (start >= r.start && start < r.end) || (end > r.start && end <= r.end));
+        if (!overlaps) {
+            const id = match[0];
+            processedRanges.push({
+                start,
+                end,
+                id
+            });
+        }
+    }
+
+    // Sort by order of appearance
+    processedRanges.sort((a, b) => a.start - b.start);
+
+    // Deduplicate by ID
+    const seenIds = new Set();
+    const result = [];
+    for (const item of processedRanges) {
+        if (!seenIds.has(item.id)) {
+            seenIds.add(item.id);
+            result.push({
+                id: item.id,
+                isLead: Boolean(item.isLead),
+                shiftEndHour: item.shiftEndHour !== undefined ? item.shiftEndHour : null,
+                shiftEndMin: item.shiftEndMin !== undefined ? item.shiftEndMin : 0
+            });
+        }
+    }
+
+    return result;
+}
+
 // Логіка роботи
 function processInput() {
     updateButtonStates();
@@ -444,10 +519,10 @@ function processInput() {
 
     const input = document.getElementById('inputIds')?.value || '';
     grid.innerHTML = '';
-    const rawIds = input.match(/\d+/g) || [];
-    const uniqueIds = [...new Set(rawIds)];
+    const parsedItems = parseOperatorInputTokens(input);
 
-    uniqueIds.forEach(id => {
+    parsedItems.forEach(item => {
+        const id = item.id;
         const op = db[id];
         const div = document.createElement('div');
 
@@ -459,13 +534,43 @@ function processInput() {
             const tag = op.handle || op.tag || '';
             const name = sanitizeName(op.name, id);
 
-            div.className = 'card active';
+            let badgesHtml = '';
+            let isChecked = true;
+
+            if (item.isLead) {
+                isChecked = false;
+                badgesHtml += `<span class="badge-role badge-lead">👑 Головний (без заявок)</span>`;
+            }
+
+            if (item.shiftEndHour !== null) {
+                const now = new Date();
+                const shiftEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), item.shiftEndHour, item.shiftEndMin || 0, 0);
+                const diffMinutes = (shiftEnd.getTime() - now.getTime()) / (1000 * 60);
+
+                const timeStr = (item.shiftEndMin && item.shiftEndMin > 0)
+                    ? `${item.shiftEndHour}:${String(item.shiftEndMin).padStart(2, '0')}`
+                    : `${item.shiftEndHour}:00`;
+
+                if (diffMinutes <= 0) {
+                    isChecked = false;
+                    badgesHtml += `<span class="badge-role badge-expired">⏳ Зміна закінчилась (до ${escapeHtml(timeStr)})</span>`;
+                    div.style.opacity = '0.65';
+                } else if (diffMinutes <= 45) {
+                    badgesHtml += `<span class="badge-role badge-warning">⚠️ Скоро кінець зміни (до ${escapeHtml(timeStr)})</span>`;
+                    div.style.borderColor = 'rgba(245, 158, 11, 0.6)';
+                } else {
+                    badgesHtml += `<span class="badge-role badge-info">🕒 До ${escapeHtml(timeStr)}</span>`;
+                }
+            }
+
+            div.className = isChecked ? 'card active' : 'card';
             div.innerHTML = `
                 <div class="card-header">
-                    <input type="checkbox" checked onchange="this.closest('.card').classList.toggle('active'); updateTags()">
+                    <input type="checkbox" ${isChecked ? 'checked' : ''} onchange="this.closest('.card').classList.toggle('active'); updateTags()">
                     <span class="card-title"><strong>Оп ${escapeHtml(id)}</strong>${name ? ` <span class="card-name">— ${escapeHtml(name)}</span>` : ''}</span>
                 </div>
                 <div class="card-subtitle">${escapeHtml(tag)}</div>
+                ${badgesHtml ? `<div class="card-badges">${badgesHtml}</div>` : ''}
             `;
             div.dataset.tag = tag;
             div.dataset.handle = tag;
@@ -741,6 +846,14 @@ window.addEventListener('DOMContentLoaded', async () => {
 });
 
 const APP_CHANGELOG = [
+    {
+        version: "1.4.2",
+        date: "2026-10-04",
+        changes: [
+            { category: "Added", text: "Підтримка синтаксису Головного бази «(г)» / «(g)» із вимкненням за замовчуванням та бейджем 👑." },
+            { category: "Added", text: "Парсинг зміни «(до HH)» з динамічною перевіркою часу (минула зміна ⏳ / скоро кінець ⚠️ / активна 🕒)." }
+        ]
+    },
     {
         version: "1.4.1",
         date: "2026-10-04",
