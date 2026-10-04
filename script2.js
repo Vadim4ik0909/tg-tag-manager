@@ -768,8 +768,8 @@ function startCustomBreak(id, event) {
     }
     const minInput = document.getElementById(`customMin_${id}`);
     const secInput = document.getElementById(`customSec_${id}`);
-    const mins = parseInt(minInput ? minInput.value : 0, 10) || 0;
-    const secs = parseInt(secInput ? secInput.value : 0, 10) || 0;
+    const mins = Math.max(0, parseInt(minInput ? minInput.value : 0, 10) || 0);
+    const secs = Math.max(0, parseInt(secInput ? secInput.value : 0, 10) || 0);
     const totalSeconds = mins * 60 + secs;
     if (totalSeconds <= 0) return;
 
