@@ -640,15 +640,19 @@ function processInput() {
             else if (outageType === 'no_light') { toggleBtnIcon = '⚡️'; toggleBtnStyle = 'opacity:1;'; }
 
             div.innerHTML = `
-                <div class="card-header">
+                <div class="card-header-row">
                     <input type="checkbox" ${isChecked ? 'checked' : ''} onchange="this.closest('.card').classList.toggle('active'); updateTags()">
                     <span class="card-title"><strong>Оп ${escapeHtml(id)}</strong>${name ? ` <span class="card-name">— ${escapeHtml(name)}</span>` : ''}</span>
-                    <div class="card-header-actions">
-                        <button type="button" class="btn-break-trigger" onclick="toggleBreakMenu('${escapeHtml(id)}', event)" title="Поставити перерву / обід">☕️</button>
+                </div>
+                <div class="card-footer-row">
+                    <div class="card-subtitle">${escapeHtml(tag)}</div>
+                    <div class="card-footer-actions">
                         <button type="button" class="btn-outage-toggle" style="${toggleBtnStyle}" onclick="toggleCardOutage(this, '${escapeHtml(id)}', event)" title="Позначити статус: Без світла / Інтернету / Офлайн">${toggleBtnIcon}</button>
+                        <div class="break-trigger-wrap">
+                            <button type="button" class="btn-break-trigger" onclick="toggleBreakMenu('${escapeHtml(id)}', event)" title="Поставити перерву / обід">☕️</button>
+                        </div>
                     </div>
                 </div>
-                <div class="card-subtitle">${escapeHtml(tag)}</div>
                 ${badgesHtml ? `<div class="card-badges">${badgesHtml}</div>` : ''}
             `;
             div.dataset.tag = tag;
@@ -686,7 +690,8 @@ function toggleBreakMenu(id, event) {
     const card = document.querySelector(`.card[data-op-id="${id}"]`);
     if (!card) return;
 
-    const existingPopover = card.querySelector('.break-menu-popover');
+    const wrap = card.querySelector('.break-trigger-wrap') || card;
+    const existingPopover = wrap.querySelector('.break-menu-popover');
     if (existingPopover) {
         existingPopover.remove();
         return;
@@ -702,7 +707,7 @@ function toggleBreakMenu(id, event) {
         <button type="button" class="btn-break-option" onclick="startOperatorBreak('${escapeHtml(id)}', 60, 'Обід', event)">🍔 1 год (Обід)</button>
     `;
 
-    card.appendChild(popover);
+    wrap.appendChild(popover);
 }
 
 function startOperatorBreak(id, durationMinutes, label, event) {
@@ -712,9 +717,12 @@ function startOperatorBreak(id, durationMinutes, label, event) {
     }
     document.querySelectorAll('.break-menu-popover').forEach(p => p.remove());
 
+    const totalMs = durationMinutes * 60 * 1000;
     const breaks = getBreaksState();
     breaks[id] = {
-        breakUntil: Date.now() + durationMinutes * 60 * 1000,
+        startAt: Date.now(),
+        totalMs: totalMs,
+        breakUntil: Date.now() + totalMs,
         breakType: durationMinutes === 60 ? 'lunch' : `${durationMinutes}m`,
         label: label
     };
@@ -725,20 +733,9 @@ function startOperatorBreak(id, durationMinutes, label, event) {
         const cb = card.querySelector('input[type="checkbox"]');
         if (cb) cb.checked = false;
         card.classList.remove('active');
-
-        let badgesContainer = card.querySelector('.card-badges');
-        if (!badgesContainer) {
-            badgesContainer = document.createElement('div');
-            badgesContainer.className = 'card-badges';
-            card.appendChild(badgesContainer);
-        }
-        const existingBreakBadge = badgesContainer.querySelector('.badge-break');
-        if (existingBreakBadge) existingBreakBadge.remove();
-
-        const icon = durationMinutes === 60 ? '🍔' : '☕️';
-        badgesContainer.insertAdjacentHTML('beforeend', `<span class="badge-role badge-break" onclick="cancelOperatorBreak('${escapeHtml(id)}', event)" title="Натисніть, щоб завершити перерву">${icon} ${escapeHtml(label)} (${durationMinutes} хв)</span>`);
     }
 
+    checkActiveBreaks();
     showToast(`✓ Оп ${id}: перерву (${label}) активовано`);
     updateTags();
 }
@@ -754,7 +751,7 @@ function cancelOperatorBreak(id, event) {
 
     const card = document.querySelector(`.card[data-op-id="${id}"]`);
     if (card) {
-        const breakBadge = card.querySelector('.badge-break');
+        const breakBadge = card.querySelector('.break-countdown-badge');
         if (breakBadge) breakBadge.remove();
 
         if ((card.dataset.outage === 'none' || !card.dataset.outage) && card.dataset.isLead !== 'true') {
@@ -775,11 +772,13 @@ function checkActiveBreaks() {
 
     for (const [id, brk] of Object.entries(breaks)) {
         const card = document.querySelector(`.card[data-op-id="${id}"]`);
-        if (now >= brk.breakUntil) {
+        const diffMs = brk.breakUntil - now;
+
+        if (diffMs <= 0) {
             delete breaks[id];
             changed = true;
             if (card) {
-                const badge = card.querySelector('.badge-break');
+                const badge = card.querySelector('.break-countdown-badge');
                 if (badge) badge.remove();
                 if ((card.dataset.outage === 'none' || !card.dataset.outage) && card.dataset.isLead !== 'true') {
                     const cb = card.querySelector('input[type="checkbox"]');
@@ -788,9 +787,26 @@ function checkActiveBreaks() {
                 }
             }
         } else if (card) {
-            const remainingMinutes = Math.max(1, Math.ceil((brk.breakUntil - now) / (60 * 1000)));
+            const totalSec = Math.max(1, Math.ceil(diffMs / 1000));
+            const mins = Math.floor(totalSec / 60);
+            const secs = totalSec % 60;
+            const timeRemainingStr = `${mins}:${String(secs).padStart(2, '0')}`;
+
+            const endDate = new Date(brk.breakUntil);
+            const endTimeStr = `${String(endDate.getHours()).padStart(2, '0')}:${String(endDate.getMinutes()).padStart(2, '0')}`;
+
+            const totalMs = brk.totalMs || (brk.breakType === 'lunch' ? 3600000 : 900000);
+            const fractionRemaining = Math.max(0, Math.min(1, diffMs / totalMs));
+            const dashoffset = (34.56 * (1 - fractionRemaining)).toFixed(2);
+
             const icon = brk.breakType === 'lunch' ? '🍔' : '☕️';
-            const text = `${icon} ${brk.label} (${remainingMinutes} хв)`;
+            const badgeContent = `
+                <svg class="radial-progress-svg" viewBox="0 0 16 16">
+                    <circle class="radial-bg" cx="8" cy="8" r="5.5" fill="none" stroke-width="2.5"></circle>
+                    <circle class="radial-bar" cx="8" cy="8" r="5.5" fill="none" stroke-width="2.5" stroke-dasharray="34.56" stroke-dashoffset="${dashoffset}"></circle>
+                </svg>
+                <span>${icon} ${escapeHtml(brk.label)} (залишилось ${timeRemainingStr} • до ${endTimeStr})</span>
+            `;
 
             let badgesContainer = card.querySelector('.card-badges');
             if (!badgesContainer) {
@@ -799,11 +815,11 @@ function checkActiveBreaks() {
                 card.appendChild(badgesContainer);
             }
 
-            let badge = badgesContainer.querySelector('.badge-break');
+            let badge = badgesContainer.querySelector('.break-countdown-badge');
             if (badge) {
-                badge.innerText = text;
+                badge.innerHTML = badgeContent;
             } else {
-                badgesContainer.insertAdjacentHTML('beforeend', `<span class="badge-role badge-break" onclick="cancelOperatorBreak('${escapeHtml(id)}', event)" title="Натисніть, щоб завершити перерву">${escapeHtml(text)}</span>`);
+                badgesContainer.insertAdjacentHTML('beforeend', `<div class="break-countdown-badge" onclick="cancelOperatorBreak('${escapeHtml(id)}', event)" title="Клікніть, щоб завершити перерву">${badgeContent}</div>`);
             }
 
             const cb = card.querySelector('input[type="checkbox"]');
@@ -820,7 +836,9 @@ function checkActiveBreaks() {
     }
 }
 
-setInterval(checkActiveBreaks, 15000);
+if (!window._breakTimerInterval) {
+    window._breakTimerInterval = setInterval(checkActiveBreaks, 1000);
+}
 
 document.addEventListener('click', (e) => {
     if (!e.target.closest('.break-menu-popover') && !e.target.closest('.btn-break-trigger')) {
@@ -1176,6 +1194,15 @@ window.addEventListener('DOMContentLoaded', async () => {
 });
 
 const APP_CHANGELOG = [
+    {
+        version: "1.4.7",
+        date: "2026-10-04",
+        changes: [
+            { category: "Added", text: "Анімований круговий таймер-індикатор (SVG radial progress ring) для перерв та обіду." },
+            { category: "Added", text: "Реальний посекундний зворотний відлік на бейджі перерви: (залишилось MM:SS • до HH:MM)." },
+            { category: "Fixed", text: "Рефакторинг структури картки оператора: перенесення кнопок дій у нижній рядок до тегу та точне закріплення випадаючого меню перерви прямо під іконкою." }
+        ]
+    },
     {
         version: "1.4.6",
         date: "2026-10-04",
